@@ -1,0 +1,13 @@
+{
+  "name": "Nexus Desktop",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "npm install",
+  "forwardPorts": [4173],
+  "portsAttributes": {
+    "4173": {
+      "label": "Nexus Web Preview",
+      "onAutoForward": "openBrowser",
+      "protocol": "http"
+    }
+  }
+}

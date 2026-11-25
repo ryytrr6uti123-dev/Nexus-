@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; frame-src http: https: about:; style-src 'self'; script-src 'self';"
+    >
+    <title>Nexus Browser</title>
+    <link rel="stylesheet" href="browser.css">
+  </head>
+  <body>
+    <header class="browser-chrome">
+      <div class="top-row">
+        <div class="window-title">
+          <span class="brand-mark" aria-hidden="true">N</span>
+          <span id="page-title">Nexus Browser</span>
+        </div>
+        <button id="new-window" class="new-window" type="button">+ New Window</button>
+      </div>
+      <form id="address-form" class="navigation-row">
+        <button id="back" class="icon-button" type="button" aria-label="Go back" title="Back">←</button>
+        <button id="forward" class="icon-button" type="button" aria-label="Go forward" title="Forward">→</button>
+        <button id="reload" class="icon-button" type="button" aria-label="Reload page" title="Reload">↻</button>
+        <input
+          id="address"
+          type="text"
+          aria-label="Search or enter an address"
+          placeholder="Search or enter an address"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <select id="search-engine" aria-label="Search engine">
+          <option value="duckduckgo">DuckDuckGo</option>
+          <option value="bing">Bing</option>
+        </select>
+        <button class="go-button" type="submit">Go</button>
+      </form>
+      <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+    </header>
+
+    <main class="page-area">
+      <webview
+        id="page"
+        class="page"
+        src="about:blank"
+        partition="persist:nexus-browser"
+        allowpopups
+        webpreferences="contextIsolation=yes,nodeIntegration=no,sandbox=yes"
+        aria-label="Web page"
+      ></webview>
+      <div id="loading" class="loading" hidden>Enter a search or web address to get started.</div>
+    </main>
+
+    <script src="browser.js"></script>
+  </body>
+</html>

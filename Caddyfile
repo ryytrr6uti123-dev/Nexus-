@@ -1,0 +1,9 @@
+{$NEXUS_DOMAIN}, {$NEXUS_DOMAIN}:8443 {
+	encode zstd gzip
+
+	basic_auth {
+		{$NEXUS_ACCESS_USER} {$NEXUS_ACCESS_PASSWORD_HASH}
+	}
+
+	reverse_proxy nexus:4173
+}

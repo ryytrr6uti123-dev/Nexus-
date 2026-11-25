@@ -1,0 +1,2961 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="nexus-base-path" content="/">
+    <meta
+        http-equiv="Content-Security-Policy"
+        content="default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://placehold.co https://img.gamemonetize.com https://img.gamemonetize.co https://*.mzstatic.com; media-src 'self' blob: https://audio-ssl.itunes.apple.com; connect-src 'self' https://cdn.jsdelivr.net https://raw.githubusercontent.com https://registry.npmjs.org ws: wss:; frame-src 'self' about: blob:; worker-src 'self' blob:;"
+    >
+    <title>Nexus — Your private desktop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* =====================================================================
+           DYNAMIC GLOW & THEME VARIABLES
+        ===================================================================== */
+        :root {
+            --accent-primary: #38bdf8;
+            --accent-secondary: #818cf8;
+            --accent-glow: rgba(56, 189, 248, 0.5);
+            --accent-glow-soft: rgba(56, 189, 248, 0.16);
+            --accent-border: rgba(56, 189, 248, 0.45);
+            --screen-radius: 34px;
+            --glass-blur: 22px;
+        }
+
+        [data-theme="crimson"] {
+            --accent-primary: #f43f5e;
+            --accent-secondary: #fb7185;
+            --accent-glow: rgba(244, 63, 94, 0.52);
+            --accent-glow-soft: rgba(244, 63, 94, 0.18);
+            --accent-border: rgba(244, 63, 94, 0.48);
+        }
+
+        [data-theme="emerald"] {
+            --accent-primary: #10b981;
+            --accent-secondary: #34d399;
+            --accent-glow: rgba(16, 185, 129, 0.5);
+            --accent-glow-soft: rgba(16, 185, 129, 0.16);
+            --accent-border: rgba(16, 185, 129, 0.45);
+        }
+
+        [data-theme="violet"] {
+            --accent-primary: #a855f7;
+            --accent-secondary: #c084fc;
+            --accent-glow: rgba(168, 85, 247, 0.52);
+            --accent-glow-soft: rgba(168, 85, 247, 0.18);
+            --accent-border: rgba(168, 85, 247, 0.48);
+        }
+
+        body {
+            background-color: #07090d;
+            color: #f1f5f9;
+            overflow: hidden;
+            user-select: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* =====================================================================
+           GLOWING & GLASSMORPHIC SURFACES
+        ===================================================================== */
+        .text-accent { color: var(--accent-primary); }
+        .bg-accent-soft { background-color: var(--accent-glow-soft); }
+        .border-accent { border-color: var(--accent-border); }
+
+        .glow-box {
+            box-shadow: 0 0 24px var(--accent-glow), inset 0 0 12px var(--accent-glow-soft);
+            border-color: var(--accent-border) !important;
+        }
+
+        .glow-hover:hover {
+            box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px var(--accent-glow-soft);
+            border-color: var(--accent-border) !important;
+        }
+
+        .glass-window {
+            background: rgba(12, 16, 24, 0.78);
+            backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+            border: 1px solid rgba(255, 255, 255, 0.11);
+            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.72), 0 0 1px rgba(255, 255, 255, 0.15);
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .glass-window.focused-window {
+            border-color: var(--accent-border);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), 0 0 26px var(--accent-glow-soft);
+        }
+
+        .glass-pill {
+            background: rgba(12, 16, 24, 0.68);
+            backdrop-filter: blur(18px) saturate(150%);
+            -webkit-backdrop-filter: blur(18px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* =====================================================================
+           WINDOWS-STYLE FULL-WIDTH AUTO-HIDING BOTTOM TASKBAR & MAGNIFICATION
+        ===================================================================== */
+        .taskbar-wrapper {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            z-index: 35;
+            transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+        }
+
+        .taskbar-wrapper.taskbar-hidden {
+            transform: translateY(calc(100% - 5px));
+        }
+
+        .taskbar-edge-glow {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px;
+            height: 4px;
+            border-radius: 9999px;
+            background: var(--accent-primary);
+            box-shadow: 0 0 14px var(--accent-glow);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .taskbar-wrapper.taskbar-hidden .taskbar-edge-glow {
+            opacity: 0.85;
+        }
+
+        .taskbar-dock {
+            width: 100%;
+            background: rgba(10, 14, 22, 0.78);
+            backdrop-filter: blur(28px) saturate(185%);
+            -webkit-backdrop-filter: blur(28px) saturate(185%);
+            border-top: 1px solid rgba(255, 255, 255, 0.13);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7), 0 0 24px var(--accent-glow-soft);
+        }
+
+        .dock-item {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-origin: bottom center;
+            will-change: transform, margin;
+            transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.3, 1.15),
+                        margin 0.14s cubic-bezier(0.2, 0.9, 0.3, 1.15),
+                        box-shadow 0.2s ease,
+                        border-color 0.2s ease,
+                        background-color 0.2s ease;
+        }
+
+        .dock-item .dock-tooltip {
+            position: absolute;
+            bottom: calc(100% + 12px);
+            left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            opacity: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            background: rgba(10, 14, 22, 0.92);
+            border: 1px solid var(--accent-border);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 12px var(--accent-glow-soft);
+            transition: opacity 0.16s ease, transform 0.16s ease;
+        }
+
+        .dock-item:hover .dock-tooltip {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .start-circle-btn {
+            border-radius: 9999px !important;
+            background: radial-gradient(circle at 30% 30%, var(--accent-glow-soft), rgba(16, 22, 34, 0.92));
+            border: 1.5px solid var(--accent-border);
+            box-shadow: 0 0 18px var(--accent-glow), inset 0 0 10px var(--accent-glow-soft);
+        }
+
+        .start-circle-btn:hover {
+            box-shadow: 0 0 28px var(--accent-glow), inset 0 0 14px var(--accent-glow);
+        }
+
+        /* =====================================================================
+           SMOOTH SLIDE-UP LAUNCHER DRAWER FROM BOTTOM
+        ===================================================================== */
+        #launcher-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #launcher-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #launcher-drawer {
+            transform: translateY(108%) scale(0.96);
+            opacity: 0;
+            transition: transform 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.34s ease;
+        }
+
+        #launcher-overlay.open #launcher-drawer {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+
+        @keyframes pulseColon {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+        .animate-colon { animation: pulseColon 2s infinite ease-in-out; }
+
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-slow { animation: spinSlow 14s linear infinite; }
+        .browser-guest {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            border: 0;
+            background: #090d14;
+        }
+        /* Nexus 2026 - clean bento desktop */
+        :root {
+            --accent-primary: #c8ff62;
+            --accent-secondary: #7da7ff;
+            --accent-glow: rgba(200, 255, 98, 0.22);
+            --accent-glow-soft: rgba(200, 255, 98, 0.10);
+            --accent-border: rgba(200, 255, 98, 0.34);
+            --screen-radius: 22px;
+            --glass-blur: 18px;
+            --ink: #f5f7f2;
+            --muted: #9da39a;
+            --panel: #151713;
+        }
+        [data-theme="crimson"] { --accent-primary:#ff8068; --accent-glow:rgba(255,128,104,.22); --accent-border:rgba(255,128,104,.34); }
+        [data-theme="emerald"] { --accent-primary:#64dfae; --accent-glow:rgba(100,223,174,.22); --accent-border:rgba(100,223,174,.34); }
+        [data-theme="violet"] { --accent-primary:#b6a6ff; --accent-glow:rgba(182,166,255,.22); --accent-border:rgba(182,166,255,.34); }
+
+        html, body { height: 100%; }
+        body {
+            background:
+                radial-gradient(circle at 82% 8%, rgba(111, 132, 91, .12), transparent 22rem),
+                radial-gradient(circle at 12% 92%, rgba(83, 93, 126, .10), transparent 24rem),
+                #0d0f0c !important;
+            color: var(--ink) !important;
+            font-family: 'Inter', sans-serif !important;
+            overflow: hidden;
+            padding: 10px !important;
+        }
+        #os-sidebar { display: none !important; }
+        #os-viewport {
+            height: calc(100vh - 20px) !important;
+            border: 1px solid rgba(255,255,255,.075) !important;
+            border-radius: 22px !important;
+            background: #11130f !important;
+            box-shadow: 0 24px 80px rgba(0,0,0,.38) !important;
+        }
+        #wallpaper-wrapper, #particle-canvas,
+        #os-viewport > header, #os-viewport > .relative.z-20:first-of-type,
+        #desktop-stage > .p-4, #desktop-stage > [onclick="toggleClockFormat()"],
+        #desktop-stage > [onclick="toggleLauncher()"],
+        #desktop-stage > .absolute.bottom-24 {
+            display: none !important;
+        }
+        #desktop-stage { background: transparent; }
+
+        .nexus-dashboard {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            overflow-y: auto;
+            padding: 22px 26px 104px;
+            scrollbar-width: thin;
+            scrollbar-color: #31352e transparent;
+        }
+        .nexus-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+            margin-bottom: 18px;
+        }
+        .nexus-brand { display:flex; align-items:center; gap:11px; font-size:15px; font-weight:750; letter-spacing:-.02em; }
+        .brand-mark { width:36px; height:36px; border-radius:11px; display:grid; place-items:center; background:var(--accent-primary); color:#11130f; box-shadow:0 8px 28px var(--accent-glow); }
+        .topbar-actions { display:flex; align-items:center; gap:8px; }
+        .topbar-search {
+            width: min(280px, 32vw); height:38px; border-radius:12px;
+            border:1px solid rgba(255,255,255,.08); background:#171916;
+            color:#fff; display:flex; align-items:center; gap:9px; padding:0 12px;
+            font-size:12px; cursor:pointer;
+        }
+        .topbar-search span { color:#777d73; }
+        .icon-button {
+            width:38px; height:38px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
+            background:#171916; color:#cbd0c6; display:grid; place-items:center; cursor:pointer;
+        }
+        .nexus-grid {
+            display:grid;
+            grid-template-columns:minmax(0, 1.55fr) minmax(280px, .75fr);
+            grid-template-rows: minmax(280px, 48vh) auto;
+            gap:14px;
+        }
+        .nexus-card {
+            border:1px solid rgba(255,255,255,.07);
+            background:rgba(23,25,21,.96);
+            border-radius:18px;
+            overflow:hidden;
+        }
+        .hero-card {
+            position:relative;
+            min-height:280px;
+            background:
+                linear-gradient(135deg, rgba(18,20,16,.25), rgba(18,20,16,.86)),
+                url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1600&q=82') center/cover;
+        }
+        .hero-card:after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(10,12,9,.88) 0%,rgba(10,12,9,.2) 70%,transparent 100%); }
+        .hero-content { position:absolute; z-index:2; left:32px; bottom:28px; max-width:440px; }
+        .eyebrow { font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--accent-primary); }
+        .hero-content h1 { margin:8px 0 18px; font-size:clamp(34px,4vw,58px); line-height:.96; letter-spacing:-.06em; }
+        .hero-actions { display:flex; gap:8px; }
+        .primary-button, .secondary-button {
+            height:42px; border-radius:12px; padding:0 16px; border:0; font-size:12px; font-weight:750; cursor:pointer;
+        }
+        .primary-button { background:var(--accent-primary); color:#10120e; }
+        .secondary-button { background:rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.10); backdrop-filter:blur(10px); }
+        .profile-card { padding:20px; display:flex; flex-direction:column; }
+        .profile-head { display:flex; align-items:flex-start; justify-content:space-between; }
+        .profile-avatar { width:58px; height:58px; border-radius:16px; display:grid; place-items:center; background:#272b23; border:1px solid rgba(255,255,255,.08); font-weight:800; font-size:18px; }
+        .profile-card h2 { margin:26px 0 4px; font-size:24px; letter-spacing:-.04em; }
+        .profile-card p { margin:0; color:var(--muted); font-size:12px; }
+        .profile-meta { margin-top:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+        .profile-stat { border-top:1px solid rgba(255,255,255,.07); padding-top:12px; }
+        .profile-stat strong { display:block; font-size:16px; }
+        .profile-stat span { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.08em; }
+        .quick-grid { grid-column:1 / -1; display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+        .app-card {
+            min-height:154px; padding:16px; border:1px solid rgba(255,255,255,.07); border-radius:18px;
+            background:#171916; color:#fff; text-align:left; cursor:pointer; transition:.22s ease;
+            display:flex; flex-direction:column;
+        }
+        .app-card:hover { transform:translateY(-3px); border-color:var(--accent-border); background:#1a1d18; }
+        .app-card-icon { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:#252921; color:var(--accent-primary); }
+        .app-card h3 { margin:auto 0 4px; font-size:15px; }
+        .app-card p { margin:0; color:var(--muted); font-size:11px; }
+
+        .taskbar-wrapper { bottom:18px !important; left:50% !important; right:auto !important; width:auto !important; transform:translateX(-50%); transition:.25s ease; }
+        .taskbar-wrapper.taskbar-hidden { transform:translate(-50%, calc(100% - 5px)); }
+        .taskbar-dock {
+            width:auto !important; height:58px; border:1px solid rgba(255,255,255,.09) !important;
+            border-radius:18px !important; background:rgba(20,22,18,.92) !important;
+            box-shadow:0 12px 38px rgba(0,0,0,.42) !important; backdrop-filter:blur(18px);
+            padding:7px 8px !important;
+        }
+        #dock-center-row { gap:5px; margin:0 !important; }
+        .taskbar-dock > div:first-child, .taskbar-dock > div:last-child { display:none !important; }
+        .dock-item { width:44px; height:44px; border-radius:12px !important; border:1px solid transparent !important; background:transparent !important; }
+        .dock-item:hover { background:rgba(255,255,255,.07) !important; border-color:rgba(255,255,255,.08) !important; }
+        .start-circle-btn { background:var(--accent-primary) !important; color:#11130f !important; box-shadow:none !important; }
+        .dock-tooltip { bottom:calc(100% + 10px) !important; border:1px solid rgba(255,255,255,.08) !important; background:#1a1c18 !important; }
+
+        .glass-window {
+            border-radius:18px !important;
+            background:rgba(20,22,18,.97) !important;
+            border:1px solid rgba(255,255,255,.09) !important;
+            box-shadow:0 30px 90px rgba(0,0,0,.62) !important;
+            backdrop-filter:blur(18px);
+        }
+        .glass-window.focused-window { border-color:var(--accent-border) !important; box-shadow:0 30px 90px rgba(0,0,0,.62),0 0 28px var(--accent-glow-soft) !important; }
+        .window-header { border-radius:18px 18px 0 0; }
+        #launcher-overlay { align-items:center !important; background:rgba(8,9,7,.72) !important; z-index:70 !important; padding:20px !important; }
+        #launcher-drawer { border:1px solid rgba(255,255,255,.09) !important; background:#171916 !important; border-radius:20px !important; box-shadow:0 30px 90px rgba(0,0,0,.65) !important; }
+        .launcher-card { border-radius:14px !important; }
+
+        @media (max-width: 900px) {
+            body { padding:0 !important; }
+            #os-viewport { height:100vh !important; border:0 !important; border-radius:0 !important; }
+            .nexus-dashboard { padding:14px 14px 92px; }
+            .nexus-grid { grid-template-columns:1fr; grid-template-rows:auto; }
+            .hero-card { min-height:330px; }
+            .profile-card { min-height:220px; }
+            .quick-grid { grid-template-columns:repeat(2,1fr); }
+            .topbar-search { display:none; }
+            .taskbar-wrapper { bottom:10px !important; max-width:calc(100vw - 20px); }
+            .dock-item { width:38px; height:38px; }
+            #dock-btn-movies, #dock-btn-monitor { display:none; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col md:flex-row p-2 sm:p-3 gap-2 sm:gap-3 bg-[#07090d]" data-theme="cyan">
+
+    <!-- =====================================================================
+         LEFT VERTICAL OS RAIL (Preserves your reference layout)
+    ====================================================================== -->
+    <aside id="os-sidebar" class="hidden md:flex w-[62px] h-full rounded-[26px] bg-[#0d1118]/90 border border-white/[0.08] flex-col items-center justify-between py-4 shrink-0 z-30 shadow-2xl">
+
+        <!-- Top Brand / Start Trigger -->
+        <button onclick="toggleLauncher()" title="Open Start Launcher (Ctrl + K)"
+            class="w-10 h-10 rounded-2xl flex items-center justify-center bg-white/[0.04] hover:bg-accent-soft border border-white/[0.08] glow-hover transition-all">
+            <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+            </svg>
+        </button>
+
+        <!-- Center Pill Quick App Switcher -->
+        <div class="flex flex-col items-center gap-2 bg-[#141a24]/90 p-1.5 rounded-[22px] border border-white/[0.06]">
+            <button onclick="openApp('ai')" title="Aether AI Assistant"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-accent hover:bg-white/[0.07] transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L14.8 8.8L22 12L14.8 15.2L12 22L9.2 15.2L2 12L9.2 8.8L12 2Z"/>
+                </svg>
+            </button>
+
+            <button onclick="spawnBrowserWindow()" title="New Web Browser Window"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-accent hover:bg-white/[0.07] transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+            </button>
+
+            <button onclick="openApp('games')" title="Arcade Games"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-accent hover:bg-white/[0.07] transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/>
+                </svg>
+            </button>
+
+            <button onclick="openApp('music')" title="Synthwave Music"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-accent hover:bg-white/[0.07] transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                </svg>
+            </button>
+
+            <button onclick="openNexusMovies()" title="Movies in Nexus"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-accent hover:bg-white/[0.07] transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v4M12 4v4M17 4v4M7 16v4M12 16v4M17 16v4M3 9h18M3 15h18"/>
+                </svg>
+            </button>
+
+            <div class="w-5 h-[1px] bg-white/10 my-0.5"></div>
+
+            <button onclick="cycleTheme()" title="Cycle Glow Color"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-accent bg-accent-soft border border-accent glow-hover transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Bottom Vertical Mini-Clock & Wallpaper Button -->
+        <div class="flex flex-col items-center gap-3 text-slate-400">
+            <button onclick="nextWallpaper()" title="Switch Scenic Backdrop"
+                class="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/[0.08] hover:text-white transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+                </svg>
+            </button>
+
+            <div class="flex flex-col items-center font-mono text-[11px] leading-tight py-1.5 px-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                <span id="rail-hour" class="font-bold text-white">08</span>
+                <span id="rail-min" class="text-accent font-semibold">22</span>
+                <span id="rail-ampm" class="text-[9px] uppercase text-slate-500 mt-0.5">AM</span>
+            </div>
+
+            <button onclick="openApp('settings')" title="System Settings"
+                class="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/[0.08] hover:text-accent transition-all">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </button>
+        </div>
+    </aside>
+
+    <!-- =====================================================================
+         MAIN ROUNDED VIEWPORT SCREEN
+    ====================================================================== -->
+    <main id="os-viewport" style="border-radius: var(--screen-radius);"
+          class="relative flex-1 h-full overflow-hidden border border-white/[0.11] shadow-[0_0_65px_rgba(0,0,0,0.88)] bg-[#0a0d13] flex flex-col justify-between">
+
+        <!-- Scenic Wallpaper Layer -->
+        <div id="wallpaper-wrapper" class="absolute inset-0 z-0 transition-transform duration-700">
+            <img id="wallpaper-img"
+                 src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2400&q=85"
+                 onerror="this.src='https://placehold.co/1920x1080/0f172a/38bdf8?text=AetherOS+Scenic+Fjord'"
+                 alt="Scenic Mountain Fjord"
+                 class="w-full h-full object-cover object-center brightness-[0.86] contrast-[1.06] transition-all duration-500" />
+            <div class="absolute inset-0 bg-gradient-to-t from-[#06080c]/85 via-transparent to-[#06080c]/35"></div>
+        </div>
+
+        <!-- Ambient Floating Glow Particles Canvas -->
+        <canvas id="particle-canvas" class="absolute inset-0 z-[1] pointer-events-none opacity-70"></canvas>
+
+        <!-- Top Center Hardware Notch -->
+        <div class="relative z-20 flex justify-center pointer-events-none">
+            <div onclick="toggleLauncher()" title="Click to toggle Start Launcher"
+                 class="w-40 sm:w-52 h-6 bg-[#07090d] rounded-b-[18px] border-b border-x border-white/[0.09] flex items-center justify-center gap-2.5 shadow-xl pointer-events-auto cursor-pointer group">
+                <span class="w-9 h-1 rounded-full bg-white/20 group-hover:bg-accent transition-colors"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
+            </div>
+        </div>
+
+        <!-- Top Status Bar Pills -->
+        <header class="relative z-20 px-4 sm:px-7 pt-2 flex items-center justify-between gap-2">
+            <div class="glass-pill px-3.5 py-1.5 rounded-full flex items-center gap-2.5 text-xs font-medium text-slate-200 shadow-lg">
+                <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_10px_var(--accent-primary)]"></span>
+                <span>AetherOS 2.4</span>
+                <span class="text-white/20">|</span>
+                <button onclick="nextWallpaper()" class="text-slate-400 hover:text-white transition-colors">Next Scene</button>
+            </div>
+
+            <!-- Theme Accent Pills -->
+            <div class="glass-pill p-1 rounded-full flex items-center gap-1 shadow-lg">
+                <button onclick="setTheme('cyan')" id="theme-pill-cyan"
+                    class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/40 transition-all">Cyan</button>
+                <button onclick="setTheme('crimson')" id="theme-pill-crimson"
+                    class="px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-400 hover:text-rose-300 border border-transparent transition-all">Crimson</button>
+                <button onclick="setTheme('emerald')" id="theme-pill-emerald"
+                    class="px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-400 hover:text-emerald-300 border border-transparent transition-all">Emerald</button>
+                <button onclick="setTheme('violet')" id="theme-pill-violet"
+                    class="px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-400 hover:text-purple-300 border border-transparent transition-all">Violet</button>
+            </div>
+        </header>
+
+        <!-- =================================================================
+             DESKTOP STAGE & FLOATING APP WINDOWS CONTAINER
+        ================================================================== -->
+        <section id="desktop-stage" class="relative z-10 flex-1 w-full h-full overflow-hidden">
+            <div class="nexus-dashboard">
+                <nav class="nexus-topbar" aria-label="Nexus dashboard">
+                    <div class="nexus-brand">
+                        <div class="brand-mark">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>
+                        </div>
+                        Nexus
+                    </div>
+                    <div class="topbar-actions">
+                        <button onclick="toggleLauncher()" class="topbar-search" type="button">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                            <span>Search apps or browse</span>
+                        </button>
+                        <button onclick="openApp('notes')" class="icon-button" type="button" aria-label="Open notes">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                        </button>
+                        <button onclick="openApp('settings')" class="icon-button" type="button" aria-label="Open settings">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21h-4v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15H3v-4h1.09a1.65 1.65 0 0 0 1.51-1A1.65 1.65 0 0 0 5.27 8.18l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 10 5.68V3h4v2.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 11H21v4z"/></svg>
+                        </button>
+                    </div>
+                </nav>
+
+                <div class="nexus-grid">
+                    <article class="nexus-card hero-card">
+                        <div class="hero-content">
+                            <div class="eyebrow">Your Nexus</div>
+                            <h1>Everything in<br>one place.</h1>
+                            <div class="hero-actions">
+                                <button onclick="spawnBrowserWindow()" class="primary-button" type="button">Open browser</button>
+                                <button onclick="openApp('ai')" class="secondary-button" type="button">Ask Nexus AI</button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <aside class="nexus-card profile-card">
+                        <div class="profile-head">
+                            <div class="profile-avatar">NX</div>
+                            <button onclick="openApp('settings')" class="icon-button" type="button" aria-label="Customize">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                            </button>
+                        </div>
+                        <h2 id="hero-hours">08</h2>
+                        <p id="hero-weekday">Ready to explore</p>
+                        <div class="profile-meta">
+                            <div class="profile-stat"><strong id="hero-minutes">22</strong><span id="hero-ampm">Local</span></div>
+                            <div class="profile-stat"><strong id="hero-day">24</strong><span id="hero-month">Today</span></div>
+                            <div class="profile-stat"><strong id="tray-clock-new">--</strong><span>Clock</span></div>
+                        </div>
+                    </aside>
+
+                    <div class="quick-grid">
+                        <button onclick="spawnBrowserWindow()" class="app-card" type="button">
+                            <div class="app-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div>
+                            <h3>Browser</h3><p>Private, fast browsing</p>
+                        </button>
+                        <button onclick="openApp('games')" class="app-card" type="button">
+                            <div class="app-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="5"/><path d="M6 12h4M8 10v4"/></svg></div>
+                            <h3>Arcade</h3><p>Thousands of games</p>
+                        </button>
+                        <button onclick="openApp('music')" class="app-card" type="button">
+                            <div class="app-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                            <h3>Music</h3><p>Search and playlists</p>
+                        </button>
+                        <button onclick="openApp('ai')" class="app-card" type="button">
+                            <div class="app-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/></svg></div>
+                            <h3>Nexus AI</h3><p>Ask, create, explore</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subtle Quick-Launch Desktop Chips (Top Left of Desktop) -->
+            <div class="p-4 sm:p-7 flex flex-wrap gap-3 max-w-xl">
+                <button onclick="openApp('ai')" class="glass-pill glow-hover px-3.5 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs font-medium text-slate-200 transition-all">
+                    <span class="w-7 h-7 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L14.8 8.8L22 12L14.8 15.2L12 22L9.2 15.2L2 12L9.2 8.8L12 2Z"/></svg>
+                    </span>
+                    <span>Aether AI</span>
+                </button>
+
+                <button onclick="spawnBrowserWindow()" class="glass-pill glow-hover px-3.5 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs font-medium text-slate-200 transition-all">
+                    <span class="w-7 h-7 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </span>
+                    <span>+ New Browser</span>
+                </button>
+
+                <button onclick="openApp('games')" class="glass-pill glow-hover px-3.5 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs font-medium text-slate-200 transition-all">
+                    <span class="w-7 h-7 rounded-xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>
+                    </span>
+                    <span>Arcade</span>
+                </button>
+
+                <button onclick="openApp('music')" class="glass-pill glow-hover px-3.5 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs font-medium text-slate-200 transition-all">
+                    <span class="w-7 h-7 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-300">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    </span>
+                    <span>Synth Music</span>
+                </button>
+            </div>
+
+            <!-- Hero Bottom-Right Clock & Date Widget (Positioned cleanly above taskbar) -->
+            <div onclick="toggleClockFormat()" title="Click to switch 12h / 24h format"
+                 class="absolute bottom-24 right-5 sm:right-8 z-[5] cursor-pointer flex items-center gap-4 px-4 py-2 rounded-[26px] hover:bg-white/[0.04] transition-all">
+                <div class="flex items-baseline">
+                    <span id="hero-hours" class="text-5xl sm:text-7xl font-black tracking-tight text-accent drop-shadow-[0_4px_24px_var(--accent-glow)]">08</span>
+                    <span class="animate-colon text-4xl sm:text-6xl font-black mx-1 text-slate-400/80">:</span>
+                    <span id="hero-minutes" class="text-5xl sm:text-7xl font-black tracking-tight text-accent drop-shadow-[0_4px_24px_var(--accent-glow)]">22</span>
+                    <span id="hero-ampm" class="ml-2 text-sm sm:text-base font-bold tracking-wider text-slate-200 uppercase">AM</span>
+                </div>
+                <div class="w-[1.5px] h-12 sm:h-14 bg-white/25 rounded-full"></div>
+                <div class="flex flex-col justify-center leading-tight">
+                    <span id="hero-month" class="text-[11px] sm:text-xs font-bold tracking-[0.18em] text-slate-200 uppercase">NOVEMBER</span>
+                    <span id="hero-day" class="text-2xl sm:text-3xl font-extrabold text-accent my-0.5">24</span>
+                    <span id="hero-weekday" class="text-xs font-medium text-slate-300">Tuesday</span>
+                </div>
+            </div>
+
+            <!-- Bottom-Left Launcher Shortcut Pill -->
+            <button onclick="toggleLauncher()"
+                class="hidden lg:flex absolute bottom-24 left-7 z-[5] glass-pill glow-hover px-4 py-2 rounded-full items-center gap-2 text-xs text-slate-300 hover:text-white transition-all">
+                <span>press</span>
+                <kbd class="px-2 py-0.5 rounded-md bg-white/10 border border-white/15 font-mono text-[11px] text-white">ctrl</kbd>
+                <kbd class="px-2 py-0.5 rounded-md bg-white/10 border border-white/15 font-mono text-[11px] text-white">k</kbd>
+                <span>or click the circle below</span>
+            </button>
+
+            <!-- =============================================================
+                 FLOATING APP WINDOWS LAYER (Dynamic Browsers + Aether AI + Games + Music + Settings + Notes + Monitor)
+            ============================================================== -->
+            <div id="windows-container" class="absolute inset-0 pointer-events-none z-40">
+
+                <!-- Dynamic Multi-Browser Windows Mount Point -->
+                <div id="browser-windows-mount"></div>
+
+                <!-- 1. AETHER AI ASSISTANT WINDOW -->
+                <div id="win-ai" onmousedown="focusWindow('ai')"
+                     class="app-window glass-window hidden pointer-events-auto absolute top-5 left-4 right-4 sm:left-16 sm:right-auto sm:w-[660px] h-[75%] max-h-[570px] rounded-[28px] flex flex-col overflow-hidden">
+                    <div class="window-header cursor-move px-4 py-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button onclick="closeApp('ai')" class="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:bg-rose-400" title="Close"></button>
+                            <button onclick="minimizeApp('ai')" class="w-3.5 h-3.5 rounded-full bg-amber-400/80 hover:bg-amber-300" title="Minimize"></button>
+                            <button onclick="maximizeApp('ai')" class="w-3.5 h-3.5 rounded-full bg-emerald-400/80 hover:bg-emerald-300" title="Expand"></button>
+                            <span class="ml-2 text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span> Nexus AI
+                            </span>
+                        </div>
+                        <select id="ai-mode-select" class="bg-black/40 border border-white/15 rounded-full px-2.5 py-1 text-[11px] text-accent outline-none cursor-pointer">
+                            <option value="creative">Code & Design Partner</option>
+                            <option value="concise">Quick Answers</option>
+                            <option value="ideas">Brainstorm</option>
+                            <option value="tutor">Learn Step by Step</option>
+                        </select>
+                    </div>
+                    <p id="ai-mode-description" class="px-4 pt-2 text-[10px] text-slate-400" aria-live="polite">
+                        Practical code and design help, with focused solutions and useful tradeoffs.
+                    </p>
+
+                    <!-- Quick Prompt Chips -->
+                    <div class="px-4 py-2.5 bg-black/25 border-b border-white/[0.07] flex items-center gap-1.5 overflow-x-auto text-[11px]">
+                        <button onclick="sendAiPreset('Help me plan a clean, responsive app dashboard')" class="px-2.5 py-1 rounded-full bg-accent-soft border border-accent/40 text-accent hover:brightness-125 whitespace-nowrap">Plan a dashboard</button>
+                        <button onclick="sendAiPreset('Explain how browser cookies work with a simple example')" class="px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 whitespace-nowrap">Explain a concept</button>
+                        <button onclick="sendAiPreset('Give me three practical ideas for a small web app')" class="px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 whitespace-nowrap">Brainstorm ideas</button>
+                        <button onclick="clearAiChat()" class="ml-auto px-2.5 py-1 rounded-full bg-white/[0.04] hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 whitespace-nowrap">Clear</button>
+                    </div>
+
+                    <!-- AI Chat Feed -->
+                    <div id="ai-chat-feed" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-[#080b11]/75 text-xs leading-relaxed">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-2xl bg-accent-soft border border-accent flex items-center justify-center text-accent shrink-0">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L14.8 8.8L22 12L14.8 15.2L12 22L9.2 15.2L2 12L9.2 8.8L12 2Z"/></svg>
+                            </div>
+                            <div class="p-3.5 rounded-2xl rounded-tl-sm bg-white/[0.05] border border-white/10 text-slate-200 max-w-[85%]">
+                                <div class="font-semibold text-accent mb-1">Nexus AI</div>
+                                Ask questions, brainstorm ideas, or get help with code using your configured Ollama model. You have 200 AI tokens each day.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 border-t border-white/[0.07] px-4 py-2 text-[10px] text-slate-400">
+                        <span id="ai-usage-status" role="status" aria-live="polite">Checking daily token balance…</span>
+                        <span class="shrink-0">1 question = 1 token</span>
+                    </div>
+
+                    <!-- AI Input Bar -->
+                    <form onsubmit="handleAiSubmit(event)" class="p-3 bg-black/35 border-t border-white/10 flex items-center gap-2">
+                        <input id="ai-prompt-input" type="text" maxlength="4000" placeholder="Ask Nexus AI..."
+                               class="flex-1 bg-white/[0.05] border border-white/10 focus:border-accent rounded-full px-4 py-2 text-xs text-white placeholder-slate-400 outline-none" />
+                        <button type="submit" class="px-4 py-2 rounded-full bg-accent-soft border border-accent text-accent text-xs font-semibold glow-hover">Send</button>
+                    </form>
+                </div>
+
+                <!-- 2. GAMES ARCADE WINDOW -->
+                <div id="win-games" onmousedown="focusWindow('games')"
+                     class="app-window glass-window hidden pointer-events-auto absolute top-4 left-3 right-3 sm:left-12 sm:right-auto sm:w-[900px] h-[86%] max-h-[780px] rounded-[28px] flex flex-col overflow-hidden">
+                    <div class="window-header cursor-move px-4 py-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button onclick="closeApp('games')" class="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:bg-rose-400"></button>
+                            <button onclick="minimizeApp('games')" class="w-3.5 h-3.5 rounded-full bg-amber-400/80 hover:bg-amber-300"></button>
+                            <button onclick="maximizeApp('games')" class="w-3.5 h-3.5 rounded-full bg-emerald-400/80 hover:bg-emerald-300"></button>
+                            <span class="ml-2 text-xs font-semibold text-slate-200">Nexus Game Library</span>
+                        </div>
+                        <span id="games-count" class="text-[11px] text-slate-400">Loading games…</span>
+                    </div>
+
+                    <div class="p-3 bg-black/20 border-b border-white/10 space-y-3">
+                        <div class="flex gap-2">
+                            <input id="games-search" type="search" autocomplete="off"
+                                   placeholder="Search 2,500+ games..."
+                                   aria-label="Search games"
+                                   class="min-w-0 flex-1 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-accent">
+                            <button id="games-retry" type="button" class="hidden rounded-full border border-accent bg-accent-soft px-4 py-2 text-xs font-semibold text-accent hover:brightness-125">Retry</button>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex gap-1.5" role="group" aria-label="Game library categories">
+                                <button id="game-view-all" data-game-view="all" type="button" aria-pressed="true"
+                                        class="rounded-full border border-accent bg-accent-soft px-3 py-1.5 text-[11px] font-semibold text-accent">All Games</button>
+                                <button id="game-view-recent" data-game-view="recent" type="button" aria-pressed="false"
+                                        class="rounded-full border border-transparent px-3 py-1.5 text-[11px] font-semibold text-slate-400 hover:text-white">Recent</button>
+                                <button id="game-view-favorites" data-game-view="favorites" type="button" aria-pressed="false"
+                                        class="rounded-full border border-transparent px-3 py-1.5 text-[11px] font-semibold text-slate-400 hover:text-white">Favorites</button>
+                            </div>
+                            <select id="games-category" aria-label="Filter by game category"
+                                    class="max-w-[180px] rounded-full border border-white/10 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-200 outline-none focus:border-accent">
+                                <option value="all">All categories</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="games-status" class="px-4 py-2 text-[11px] text-slate-400" role="status" aria-live="polite">
+                        Open the library to load games.
+                    </div>
+                    <div id="games-grid" class="grid flex-1 min-h-0 grid-cols-2 gap-3 overflow-y-auto p-3 sm:grid-cols-3 lg:grid-cols-4"></div>
+                    <button id="games-more" type="button" class="hidden mx-auto mb-3 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs text-slate-200 hover:bg-white/[0.12]">Load more</button>
+                </div>
+
+                <!-- 3. MUSIC SEARCH, PREVIEWS, LYRICS LINKS, AND PLAYLISTS -->
+                <div id="win-music" onmousedown="focusWindow('music')"
+                     class="app-window glass-window hidden pointer-events-auto absolute top-4 left-3 right-3 sm:left-20 sm:right-auto sm:w-[900px] h-[86%] max-h-[780px] rounded-[28px] flex flex-col overflow-hidden">
+                    <div class="window-header cursor-move px-4 py-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button onclick="closeApp('music')" class="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:bg-rose-400" title="Close"></button>
+                            <button onclick="minimizeApp('music')" class="w-3.5 h-3.5 rounded-full bg-amber-400/80 hover:bg-amber-300" title="Minimize"></button>
+                            <button onclick="maximizeApp('music')" class="w-3.5 h-3.5 rounded-full bg-emerald-400/80 hover:bg-emerald-300" title="Maximize"></button>
+                            <span class="ml-2 text-xs font-semibold text-slate-200">Nexus Music</span>
+                        </div>
+                        <span id="music-sync-status" class="text-[11px] text-slate-400">Guest playlists save on this device</span>
+                    </div>
+
+                    <div class="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
+                        <form id="music-search-form" class="flex gap-2">
+                            <input id="music-search-input" type="search" maxlength="100" required
+                                   placeholder="Search any artist, producer, or song"
+                                   class="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/35 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-accent">
+                            <button class="rounded-xl border border-accent bg-accent-soft px-4 py-2 text-xs font-semibold text-accent hover:brightness-125" type="submit">Search</button>
+                        </form>
+                        <p id="music-message" class="min-h-4 text-[11px] text-slate-400" role="status" aria-live="polite">Search songs and play available previews. Open full tracks and lyrics in the Nexus browser.</p>
+
+                        <div class="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.8fr)]">
+                            <section class="flex min-h-0 flex-col gap-3">
+                                <div class="rounded-2xl border border-white/10 bg-black/25 p-3">
+                                    <div class="flex items-center gap-3">
+                                        <img id="music-artwork" class="h-16 w-16 rounded-xl bg-white/5 object-cover" alt="" hidden>
+                                        <div class="min-w-0 flex-1">
+                                            <h3 id="music-current-title" class="truncate text-sm font-semibold text-white">Choose a song preview</h3>
+                                            <p id="music-current-artist" class="truncate text-xs text-slate-400">Artist and album details appear here</p>
+                                        </div>
+                                    </div>
+                                    <audio id="music-audio" class="mt-3 w-full" controls preload="none"></audio>
+                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                        <label class="flex items-center gap-2 text-[11px] text-slate-300">
+                                            <input id="music-loop" type="checkbox" class="accent-sky-400"> Loop
+                                        </label>
+                                        <select id="music-playlist-target" class="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#111720] px-2 py-1.5 text-[11px] text-slate-200">
+                                            <option value="">Select a playlist</option>
+                                        </select>
+                                        <button id="music-add-current" type="button" class="rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11px] text-slate-200 hover:border-accent">Add to playlist</button>
+                                        <button id="music-open-lyrics" type="button" class="rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11px] text-slate-200 hover:border-accent" disabled>Lyrics search</button>
+                                        <button id="music-open-track" type="button" class="rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11px] text-slate-200 hover:border-accent" disabled>Open full track</button>
+                                    </div>
+                                </div>
+
+                                <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                                    <h3 class="border-b border-white/10 px-3 py-2 text-xs font-semibold text-slate-200">Search results</h3>
+                                    <div id="music-results" class="min-h-0 flex-1 space-y-2 overflow-y-auto p-2 text-xs text-slate-400">Search for music to see results.</div>
+                                </div>
+                            </section>
+
+                            <aside class="flex min-h-0 flex-col gap-3 overflow-y-auto">
+                                <form id="music-playlist-form" class="flex gap-2">
+                                    <input id="music-playlist-name" type="text" maxlength="60" required placeholder="New playlist name"
+                                           class="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/35 px-3 py-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-accent">
+                                    <button type="submit" class="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200 hover:border-accent">Create</button>
+                                </form>
+                                <div class="min-h-0 rounded-2xl border border-white/10 bg-black/20">
+                                    <h3 class="border-b border-white/10 px-3 py-2 text-xs font-semibold text-slate-200">Playlists</h3>
+                                    <div id="music-playlists" class="max-h-32 space-y-1 overflow-y-auto p-2 text-xs text-slate-400">No playlists yet.</div>
+                                </div>
+                                <div class="min-h-0 flex-1 rounded-2xl border border-white/10 bg-black/20">
+                                    <div class="flex items-center justify-between border-b border-white/10 px-3 py-2">
+                                        <h3 id="music-playlist-title" class="truncate text-xs font-semibold text-slate-200">Playlist tracks</h3>
+                                        <button id="music-delete-playlist" type="button" class="ml-2 rounded-lg px-2 py-1 text-[10px] text-rose-300 hover:bg-rose-500/10" disabled>Delete</button>
+                                    </div>
+                                    <div id="music-playlist-tracks" class="max-h-48 space-y-1 overflow-y-auto p-2 text-xs text-slate-400">Select or create a playlist.</div>
+                                </div>
+                                <div class="rounded-2xl border border-white/10 bg-black/20">
+                                    <h3 class="border-b border-white/10 px-3 py-2 text-xs font-semibold text-slate-200">Recently played</h3>
+                                    <div id="music-recents" class="max-h-32 space-y-1 overflow-y-auto p-2 text-xs text-slate-400">Your recent previews appear here.</div>
+                                </div>
+                            </aside>
+                        </div>
+
+                        <details class="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                            <summary class="cursor-pointer text-xs font-semibold text-slate-300">Ambient synth</summary>
+                            <div class="flex flex-col items-center py-4 text-center">
+                                <div class="relative mb-3 flex h-28 w-28 items-center justify-center rounded-full border-2 border-accent bg-black/50 glow-box">
+                                    <canvas id="audio-viz" width="116" height="116" class="rounded-full"></canvas>
+                                    <div id="vinyl-core" class="absolute flex h-10 w-10 items-center justify-center rounded-full border border-accent bg-[#0d1118]">
+                                        <span class="h-2.5 w-2.5 rounded-full bg-accent"></span>
+                                    </div>
+                                </div>
+                                <h3 id="track-title" class="text-sm font-bold text-white">Midnight Fjord Drift</h3>
+                                <p id="track-artist" class="mb-3 text-xs text-slate-400">AetherOS Generative Synth • 432Hz Chill</p>
+                                <div class="mb-3 flex flex-wrap justify-center gap-1.5">
+                                    <button onclick="selectTrack(0)" class="track-pill rounded-full border border-accent bg-accent-soft px-3 py-1 text-xs font-medium text-accent">1. Fjord Drift</button>
+                                    <button onclick="selectTrack(1)" class="track-pill rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-slate-300 hover:text-white">2. Neon Rain</button>
+                                    <button onclick="selectTrack(2)" class="track-pill rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-slate-300 hover:text-white">3. Aurora Pulse</button>
+                                </div>
+                                <div class="mb-3 flex items-center gap-4">
+                                    <button onclick="prevTrack()" class="rounded-full border border-white/10 bg-white/[0.06] p-2 text-slate-200" aria-label="Previous synth track">Previous</button>
+                                    <button onclick="toggleMusicPlay()" id="music-play-btn" class="rounded-full border-2 border-accent bg-accent-soft px-4 py-2 text-accent glow-box">Play</button>
+                                    <button onclick="nextTrack()" class="rounded-full border border-white/10 bg-white/[0.06] p-2 text-slate-200" aria-label="Next synth track">Next</button>
+                                </div>
+                                <div class="flex w-full max-w-xs items-center gap-3 text-xs text-slate-400">
+                                    <span>Vol</span>
+                                    <input type="range" min="0" max="100" value="65" oninput="setMusicVolume(this.value)" class="flex-1 cursor-pointer accent-sky-400">
+                                    <span id="vol-label" class="w-8 text-right font-mono">65%</span>
+                                </div>
+                            </div>
+                        </details>
+                </div>
+                </div>
+
+                <!-- 4. SYSTEM SETTINGS WINDOW -->
+                <div id="win-settings" onmousedown="focusWindow('settings')"
+                     class="app-window glass-window hidden pointer-events-auto absolute top-6 left-4 right-4 sm:left-32 sm:right-auto sm:w-[640px] h-[72%] max-h-[540px] rounded-[28px] flex flex-col overflow-hidden">
+                    <div class="window-header cursor-move px-4 py-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button onclick="closeApp('settings')" class="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:bg-rose-400"></button>
+                            <button onclick="minimizeApp('settings')" class="w-3.5 h-3.5 rounded-full bg-amber-400/80 hover:bg-amber-300"></button>
+                            <button onclick="maximizeApp('settings')" class="w-3.5 h-3.5 rounded-full bg-emerald-400/80 hover:bg-emerald-300"></button>
+                            <span class="ml-2 text-xs font-semibold text-slate-200">AetherOS Customization & Settings</span>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                        <!-- Glow Theme Selection -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">1. Neon Edge Glow Accent</h4>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                <button onclick="setTheme('cyan')" class="p-3 rounded-2xl bg-sky-500/15 border border-sky-400/40 text-left hover:scale-[1.02] transition-transform">
+                                    <div class="w-5 h-5 rounded-full bg-sky-400 shadow-[0_0_12px_#38bdf8] mb-2"></div>
+                                    <div class="text-xs font-semibold text-white">Arctic Cyan</div>
+                                </button>
+                                <button onclick="setTheme('crimson')" class="p-3 rounded-2xl bg-rose-500/15 border border-rose-400/40 text-left hover:scale-[1.02] transition-transform">
+                                    <div class="w-5 h-5 rounded-full bg-rose-500 shadow-[0_0_12px_#f43f5e] mb-2"></div>
+                                    <div class="text-xs font-semibold text-white">Neon Crimson</div>
+                                </button>
+                                <button onclick="setTheme('emerald')" class="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-left hover:scale-[1.02] transition-transform">
+                                    <div class="w-5 h-5 rounded-full bg-emerald-400 shadow-[0_0_12px_#10b981] mb-2"></div>
+                                    <div class="text-xs font-semibold text-white">Cyber Emerald</div>
+                                </button>
+                                <button onclick="setTheme('violet')" class="p-3 rounded-2xl bg-purple-500/15 border border-purple-400/40 text-left hover:scale-[1.02] transition-transform">
+                                    <div class="w-5 h-5 rounded-full bg-purple-400 shadow-[0_0_12px_#a855f7] mb-2"></div>
+                                    <div class="text-xs font-semibold text-white">Royal Violet</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Geometry & Blur Sliders -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="p-4 rounded-2xl bg-white/[0.04] border border-white/10">
+                                <div class="flex justify-between text-xs mb-2">
+                                    <span class="text-slate-300 font-medium">Screen Corner Roundness</span>
+                                    <span id="radius-val" class="font-mono text-accent">34px</span>
+                                </div>
+                                <input type="range" min="12" max="48" value="34" oninput="updateCornerRadius(this.value)" class="w-full cursor-pointer">
+                            </div>
+
+                            <div class="p-4 rounded-2xl bg-white/[0.04] border border-white/10">
+                                <div class="flex justify-between text-xs mb-2">
+                                    <span class="text-slate-300 font-medium">Glass Frost Blur</span>
+                                    <span id="blur-val" class="font-mono text-accent">22px</span>
+                                </div>
+                                <input type="range" min="6" max="36" value="22" oninput="updateGlassBlur(this.value)" class="w-full cursor-pointer">
+                            </div>
+                        </div>
+
+                        <!-- Scenic Wallpaper Picker -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">2. Scenic Desktop Backdrop</h4>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                <button onclick="setWallpaper(0)" class="group relative h-20 rounded-2xl overflow-hidden border border-white/15 hover:border-accent">
+                                    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=60" class="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                    <span class="absolute inset-x-0 bottom-0 bg-black/65 text-[10px] py-1 text-center text-white">Lofoten Fjord</span>
+                                </button>
+                                <button onclick="setWallpaper(1)" class="group relative h-20 rounded-2xl overflow-hidden border border-white/15 hover:border-accent">
+                                    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=60" class="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                    <span class="absolute inset-x-0 bottom-0 bg-black/65 text-[10px] py-1 text-center text-white">Alpine Ridge</span>
+                                </button>
+                                <button onclick="setWallpaper(2)" class="group relative h-20 rounded-2xl overflow-hidden border border-white/15 hover:border-accent">
+                                    <img src="https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=400&q=60" class="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                    <span class="absolute inset-x-0 bottom-0 bg-black/65 text-[10px] py-1 text-center text-white">Aurora Night</span>
+                                </button>
+                                <button onclick="setWallpaper(3)" class="group relative h-20 rounded-2xl overflow-hidden border border-white/15 hover:border-accent">
+                                    <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=60" class="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                    <span class="absolute inset-x-0 bottom-0 bg-black/65 text-[10px] py-1 text-center text-white">Starlit Peak</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Toggle Switches -->
+                        <div class="flex flex-wrap gap-3 pt-1">
+                            <button onclick="toggleClockFormat()" class="px-4 py-2 rounded-2xl bg-white/[0.06] hover:bg-accent-soft border border-white/10 hover:border-accent text-xs font-medium text-white transition-all">
+                                Toggle 12h / 24h Clock
+                            </button>
+                            <button onclick="toggleParticles()" id="particles-toggle-btn" class="px-4 py-2 rounded-2xl bg-accent-soft border border-accent text-xs font-medium text-accent transition-all">
+                                Ambient Glow Particles: ON
+                            </button>
+                            <button onclick="toggleTaskbarAutoHide()" id="autohide-toggle-btn" class="px-4 py-2 rounded-2xl bg-accent-soft border border-accent text-xs font-medium text-accent transition-all">
+                                Bottom Bar Auto-Hide: ON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. CYBER NOTES / SCRATCHPAD WINDOW -->
+                <div id="win-notes" onmousedown="focusWindow('notes')"
+                     class="app-window glass-window hidden pointer-events-auto absolute top-10 left-4 right-4 sm:left-48 sm:right-auto sm:w-[500px] h-[380px] rounded-[28px] flex flex-col overflow-hidden">
+                    <div class="window-header cursor-move px-4 py-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button onclick="closeApp('notes')" class="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:bg-rose-400"></button>
+                            <button onclick="minimizeApp('notes')" class="w-3.5 h-3.5 rounded-full bg-amber-400/80 hover:bg-amber-300"></button>
+                            <span class="ml-2 text-xs font-semibold text-slate-200">CyberNotes Scratchpad</span>
+                        </div>
+                        <span id="note-status" class="text-[11px] text-accent font-mono">Auto-saved</span>
+                    </div>
+                    <textarea id="notes-textarea" oninput="saveNotes(this.value)" placeholder="Write project ideas, code snippets, or reminders here..."
+                        class="flex-1 w-full p-5 bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none resize-none leading-relaxed font-sans"></textarea>
+                </div>
+
+                <!-- 6. SYSTEM MONITOR WINDOW -->
+                <div id="win-monitor" onmousedown="focusWindow('monitor')"
+                     class="app-window glass-window hidden pointer-events-auto absolute top-10 left-4 right-4 sm:left-36 sm:right-auto sm:w-[520px] rounded-[28px] flex flex-col overflow-hidden">
+                    <div class="window-header cursor-move px-4 py-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button onclick="closeApp('monitor')" class="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:bg-rose-400"></button>
+                            <button onclick="minimizeApp('monitor')" class="w-3.5 h-3.5 rounded-full bg-amber-400/80 hover:bg-amber-300"></button>
+                            <span class="ml-2 text-xs font-semibold text-slate-200">Neural Core Telemetry</span>
+                        </div>
+                        <span class="text-[11px] font-mono text-emerald-400">60 FPS • ONLINE</span>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10">
+                                <div class="text-[11px] text-slate-400">CPU Load</div>
+                                <div id="mon-cpu" class="text-xl font-mono font-bold text-accent mt-1">28%</div>
+                            </div>
+                            <div class="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10">
+                                <div class="text-[11px] text-slate-400">Memory</div>
+                                <div id="mon-ram" class="text-xl font-mono font-bold text-white mt-1">12.4 GB</div>
+                            </div>
+                            <div class="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10">
+                                <div class="text-[11px] text-slate-400">GPU Temp</div>
+                                <div class="text-xl font-mono font-bold text-emerald-400 mt-1">44°C</div>
+                            </div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-black/35 border border-white/10">
+                            <div class="text-xs text-slate-300 mb-2 font-medium">Real-Time Pulse Wave</div>
+                            <canvas id="telemetry-canvas" width="440" height="90" class="w-full h-20 rounded-xl"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- =================================================================
+             FULL-WIDTH AUTO-HIDING WINDOWS-STYLE BOTTOM TASKBAR WITH MAGNIFICATION
+        ================================================================== -->
+        <div id="taskbar-wrapper" class="taskbar-wrapper">
+            <div class="taskbar-edge-glow"></div>
+            <nav id="windows-taskbar"
+                 class="taskbar-dock px-4 sm:px-6 py-2 flex items-end justify-between gap-3">
+
+                <!-- Left System Status Pill -->
+                <div class="hidden md:flex items-center gap-2 self-center text-[11px] text-slate-400 min-w-[140px]">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+                    <span id="taskbar-browser-count" class="font-mono text-slate-300">0 Browsers</span>
+                </div>
+
+                <!-- Center Magnification Dock Row (Start Circle + Aether AI + Multi-Browser + Apps) -->
+                <div id="dock-center-row" class="mx-auto flex items-end gap-2 sm:gap-2.5">
+
+                    <!-- THE GLOWING CIRCLE START BUTTON -->
+                    <button onclick="toggleLauncher()" id="dock-btn-start"
+                            class="dock-item start-circle-btn group cursor-pointer" aria-label="Start Launcher">
+                        <span class="dock-tooltip">Start Launcher (Ctrl+K)</span>
+                        <div class="w-5 h-5 rounded-full border-2 border-white/90 flex items-center justify-center relative">
+                            <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_10px_var(--accent-primary)]"></span>
+                        </div>
+                    </button>
+
+                    <!-- Subtle Divider -->
+                    <div class="w-[1px] h-7 bg-white/15 self-center mx-0.5"></div>
+
+                    <!-- Custom Icon: Aether AI -->
+                    <button onclick="openApp('ai')" id="dock-btn-ai"
+                            class="dock-item bg-white/[0.06] hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-400/50 text-cyan-300 cursor-pointer">
+                        <span class="dock-tooltip">Aether AI</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L14.8 8.8L22 12L14.8 15.2L12 22L9.2 15.2L2 12L9.2 8.8L12 2Z"/>
+                        </svg>
+                        <span id="dot-ai" class="hidden absolute -bottom-1 w-2 h-1 rounded-full bg-accent shadow-[0_0_8px_var(--accent-primary)]"></span>
+                    </button>
+
+                    <!-- Custom Icon: Multi-Window Web Browser (Spawns a new window on click!) -->
+                    <button onclick="spawnBrowserWindow()" id="dock-btn-browser"
+                            class="dock-item bg-white/[0.06] hover:bg-sky-500/20 border border-white/10 hover:border-sky-400/50 text-sky-300 cursor-pointer">
+                        <span class="dock-tooltip">New Browser Window (+)</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>
+                        </svg>
+                        <span id="browser-badge" class="hidden absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 rounded-full bg-sky-500 text-[10px] font-bold text-slate-950 flex items-center justify-center shadow">1</span>
+                        <span id="dot-browser" class="hidden absolute -bottom-1 w-2 h-1 rounded-full bg-accent shadow-[0_0_8px_var(--accent-primary)]"></span>
+                    </button>
+
+                    <!-- Custom Icon: Games Arcade -->
+                    <button onclick="openApp('games')" id="dock-btn-games"
+                            class="dock-item bg-white/[0.06] hover:bg-rose-500/20 border border-white/10 hover:border-rose-400/50 text-rose-300 cursor-pointer">
+                        <span class="dock-tooltip">Neon Games</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="6" width="20" height="12" rx="5"/><path d="M6 12h4M8 10v4"/><circle cx="15.5" cy="11" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/>
+                        </svg>
+                        <span id="dot-games" class="hidden absolute -bottom-1 w-2 h-1 rounded-full bg-accent shadow-[0_0_8px_var(--accent-primary)]"></span>
+                    </button>
+
+                    <!-- Custom Icon: Synth Music -->
+                    <button onclick="openApp('music')" id="dock-btn-music"
+                            class="dock-item bg-white/[0.06] hover:bg-purple-500/20 border border-white/10 hover:border-purple-400/50 text-purple-300 cursor-pointer">
+                        <span class="dock-tooltip">Synth Music</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                        </svg>
+                        <span id="dot-music" class="hidden absolute -bottom-1 w-2 h-1 rounded-full bg-accent shadow-[0_0_8px_var(--accent-primary)]"></span>
+                    </button>
+
+                    <button onclick="openNexusMovies()" id="dock-btn-movies"
+                            class="dock-item bg-white/[0.06] hover:bg-indigo-500/20 border border-white/10 hover:border-indigo-400/50 text-indigo-300 cursor-pointer">
+                        <span class="dock-tooltip">Movies · Tubi in Nexus</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v4M12 4v4M17 4v4M7 16v4M12 16v4M17 16v4M3 9h18M3 15h18"/>
+                        </svg>
+                    </button>
+
+                    <!-- Custom Icon: Cyber Notes -->
+                    <button onclick="openApp('notes')" id="dock-btn-notes"
+                            class="dock-item bg-white/[0.06] hover:bg-amber-500/20 border border-white/10 hover:border-amber-400/50 text-amber-300 cursor-pointer">
+                        <span class="dock-tooltip">Cyber Notes</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+                        </svg>
+                        <span id="dot-notes" class="hidden absolute -bottom-1 w-2 h-1 rounded-full bg-accent shadow-[0_0_8px_var(--accent-primary)]"></span>
+                    </button>
+
+                    <!-- Custom Icon: System Monitor -->
+                    <button onclick="openApp('monitor')" id="dock-btn-monitor"
+                            class="dock-item bg-white/[0.06] hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-400/50 text-emerald-300 cursor-pointer">
+                        <span class="dock-tooltip">System Monitor</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        <span id="dot-monitor" class="hidden absolute -bottom-1 w-2 h-1 rounded-full bg-accent shadow-[0_0_8px_var(--accent-primary)]"></span>
+                    </button>
+
+                    <!-- Custom Icon: Settings -->
+                    <button onclick="openApp('settings')" id="dock-btn-settings"
+                            class="dock-item bg-white/[0.06] hover:bg-accent-soft border border-white/10 hover:border-accent text-accent cursor-pointer">
+                        <span class="dock-tooltip">Settings</span>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                        <span id="dot-settings" class="hidden absolute -bottom-1 w-2 h-1 rounded-full bg-accent shadow-[0_0_8px_var(--accent-primary)]"></span>
+                    </button>
+                </div>
+
+                <!-- Right System Tray (Quick Auto-Hide Pin & Mini Clock) -->
+                <div class="hidden md:flex items-center justify-end gap-3 self-center min-w-[140px] text-xs">
+                    <button onclick="toggleTaskbarAutoHide()" title="Lock / Auto-Hide Bottom Bar"
+                            class="px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-accent-soft border border-white/10 text-[11px] text-slate-300 hover:text-accent transition-all">
+                        <span id="tray-pin-label">Auto-Hide</span>
+                    </button>
+                    <span id="tray-clock" class="font-mono font-semibold text-slate-200">08:22</span>
+                </div>
+            </nav>
+        </div>
+
+        <!-- =================================================================
+             SMOOTH SLIDE-UP LAUNCHER DRAWER (Rises smoothly from bottom)
+        ================================================================== -->
+        <div id="launcher-overlay" onclick="if(event.target === this) closeLauncher()"
+             class="fixed inset-0 z-40 bg-black/55 backdrop-blur-md flex items-end justify-center pb-20 sm:pb-24 px-4">
+
+            <div id="launcher-drawer"
+                 class="w-full max-w-3xl rounded-[32px] bg-[#0c1018]/90 backdrop-blur-2xl border border-accent glow-box p-5 sm:p-6 shadow-[0_30px_90px_rgba(0,0,0,0.9)]">
+
+                <!-- Search Bar inside Launcher -->
+                <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-black/40 border border-white/10 focus-within:border-accent mb-4">
+                    <svg class="w-4 h-4 text-accent shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input id="launcher-search" type="text" oninput="filterLauncherApps(this.value)"
+                           placeholder="Search Aether AI, Web Browser, Games, Music, Settings..."
+                           class="w-full bg-transparent text-sm text-white placeholder-slate-400 outline-none" />
+                    <button onclick="closeLauncher()" class="px-2 py-0.5 rounded-lg bg-white/10 text-[10px] font-mono text-slate-300 hover:text-white">ESC</button>
+                </div>
+
+                <!-- Quick Featured Row inside Launcher -->
+                <div class="mb-4">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-2">Quick Row</div>
+                    <div class="flex items-center gap-2 overflow-x-auto pb-1">
+                        <button onclick="launchFromDrawer('ai')" class="px-3.5 py-2 rounded-full bg-accent-soft border border-accent text-accent text-xs font-semibold flex items-center gap-2 shrink-0 hover:brightness-125">
+                            <span>✨ Ask Aether AI</span>
+                        </button>
+                        <button onclick="closeLauncher(); spawnBrowserWindow();" class="px-3.5 py-2 rounded-full bg-sky-500/15 border border-sky-400/40 text-sky-300 text-xs font-semibold flex items-center gap-2 shrink-0 hover:brightness-125">
+                            <span>🌐 + New Browser Window</span>
+                        </button>
+                        <button onclick="launchFromDrawer('games')" class="px-3.5 py-2 rounded-full bg-rose-500/15 border border-rose-400/40 text-rose-300 text-xs font-semibold flex items-center gap-2 shrink-0 hover:brightness-125">
+                            <span>🎮 Browse 2,500+ Games</span>
+                        </button>
+                        <button onclick="launchFromDrawer('music')" class="px-3.5 py-2 rounded-full bg-purple-500/15 border border-purple-400/40 text-purple-300 text-xs font-semibold flex items-center gap-2 shrink-0 hover:brightness-125">
+                            <span>🎵 Music search</span>
+                        </button>
+                        <button onclick="closeLauncher(); openNexusMovies();" class="px-3.5 py-2 rounded-full bg-indigo-500/15 border border-indigo-400/40 text-indigo-300 text-xs font-semibold flex items-center gap-2 shrink-0 hover:brightness-125">
+                            <span>🎬 Movies in Nexus</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Primary App Grid (Aether AI, Web Browser, Games, Music, Settings + Extras) -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between px-1 mb-2.5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">All Applications</span>
+                        <span class="text-[11px] text-accent">Click to Launch</span>
+                    </div>
+
+                    <div id="launcher-app-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <!-- Aether AI Card -->
+                        <button data-search="aether ai assistant copilot chat code" onclick="launchFromDrawer('ai')"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/50 flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L14.8 8.8L22 12L14.8 15.2L12 22L9.2 15.2L2 12L9.2 8.8L12 2Z"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">Aether AI</div>
+                                <div class="text-[11px] text-slate-400">Neural Copilot</div>
+                            </div>
+                        </button>
+
+                        <!-- Web Browser Card (Multi-Window) -->
+                        <button data-search="web browser internet surf multi window" onclick="closeLauncher(); spawnBrowserWindow();"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-sky-500/15 border border-white/10 hover:border-sky-400/50 flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">Web Browser</div>
+                                <div class="text-[11px] text-slate-400">+ Multi-Window</div>
+                            </div>
+                        </button>
+
+                        <!-- Games Arcade Card -->
+                        <button data-search="games arcade browse library play" onclick="launchFromDrawer('games')"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-rose-500/15 border border-white/10 hover:border-rose-400/50 flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300 group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">Games</div>
+                                <div class="text-[11px] text-slate-400">Snake & Reflex</div>
+                            </div>
+                        </button>
+
+                        <!-- Music Synth Card -->
+                        <button data-search="music synthwave audio player lofi" onclick="launchFromDrawer('music')"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-purple-500/15 border border-white/10 hover:border-purple-400/50 flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-300 group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">Music</div>
+                                <div class="text-[11px] text-slate-400">Chill Synth Player</div>
+                            </div>
+                        </button>
+
+                        <button data-search="movies films streaming tubi" onclick="closeLauncher(); openNexusMovies();"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-indigo-500/15 border border-white/10 hover:border-indigo-400/50 flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v4M12 4v4M17 4v4M7 16v4M12 16v4M17 16v4M3 9h18M3 15h18"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">Movies</div>
+                                <div class="text-[11px] text-slate-400">Tubi inside Nexus</div>
+                            </div>
+                        </button>
+
+                        <!-- Settings Card -->
+                        <button data-search="settings theme glow wallpaper customize" onclick="launchFromDrawer('settings')"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-accent-soft border border-white/10 hover:border-accent flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-accent-soft border border-accent flex items-center justify-center text-accent group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">Settings</div>
+                                <div class="text-[11px] text-slate-400">Glow & Appearance</div>
+                            </div>
+                        </button>
+
+                        <!-- Extra App: Cyber Notes -->
+                        <button data-search="notes scratchpad write pad" onclick="launchFromDrawer('notes')"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-amber-500/15 border border-white/10 hover:border-amber-400/50 flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">Cyber Notes</div>
+                                <div class="text-[11px] text-slate-400">Auto-Save Pad</div>
+                            </div>
+                        </button>
+
+                        <!-- Extra App: System Monitor -->
+                        <button data-search="system monitor cpu telemetry stats" onclick="launchFromDrawer('monitor')"
+                            class="launcher-card group p-3.5 rounded-2xl bg-white/[0.04] hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-400/50 flex items-center gap-3 text-left transition-all">
+                            <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 group-hover:scale-110 transition-transform shrink-0">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs sm:text-sm font-semibold text-white">System Monitor</div>
+                                <div class="text-[11px] text-slate-400">Live Telemetry</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick System Actions Bar at bottom of Launcher -->
+                <div class="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2">
+                        <button onclick="cycleTheme()" class="px-3 py-1.5 rounded-xl bg-accent-soft border border-accent text-accent font-medium hover:brightness-125">
+                            Switch Glow Color
+                        </button>
+                        <button onclick="nextWallpaper()" class="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200">
+                            Next Wallpaper
+                        </button>
+                    </div>
+                    <button onclick="minimizeAllWindows(); closeLauncher();" class="px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-400 hover:text-white">
+                        Show Desktop
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Notification Toast -->
+        <div id="os-toast" class="pointer-events-none opacity-0 translate-y-2 fixed top-16 left-1/2 -translate-x-1/2 z-50 glass-pill px-4 py-2 rounded-full border border-accent text-xs font-medium text-white flex items-center gap-2 shadow-2xl transition-all duration-300">
+            <span class="w-2 h-2 rounded-full bg-accent"></span>
+            <span id="os-toast-text">Ready</span>
+        </div>
+
+    </main>
+
+    <div id="profile-widget" class="fixed right-4 top-4 z-[2100]">
+        <button id="profile-button" type="button" aria-label="Open profile" aria-expanded="false"
+                class="grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-[#111720]/90 text-slate-300 shadow-xl backdrop-blur-xl hover:border-accent hover:text-white">
+            <svg id="profile-blank-icon" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                <circle cx="12" cy="8" r="3.5"/><path d="M5 21v-1.5a7 7 0 0 1 14 0V21z"/>
+            </svg>
+            <span id="profile-avatar-text" class="hidden text-sm font-bold"></span>
+        </button>
+        <section id="profile-panel" class="absolute right-0 top-14 hidden w-[min(90vw,340px)] rounded-2xl border border-white/15 bg-[#0c1018]/95 p-4 text-white shadow-2xl backdrop-blur-2xl" aria-label="Nexus profile">
+            <header class="mb-3 flex items-center justify-between">
+                <h2 class="text-sm font-semibold">Nexus Profile</h2>
+                <button id="profile-close" type="button" class="rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-white/10 hover:text-white" aria-label="Close profile">Close</button>
+            </header>
+            <p id="profile-message" class="mb-3 text-xs text-slate-400" role="status" aria-live="polite">Guest profile · saved on this device</p>
+            <div id="profile-guest">
+                <label class="mb-1 block text-xs text-slate-300" for="profile-username">Username</label>
+                <input id="profile-username" type="text" minlength="3" maxlength="24" autocomplete="username"
+                       class="mb-3 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2 text-sm text-white outline-none focus:border-accent">
+                <label class="mb-1 block text-xs text-slate-300" for="profile-password">Password</label>
+                <input id="profile-password" type="password" minlength="8" maxlength="256" autocomplete="current-password"
+                       class="mb-3 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2 text-sm text-white outline-none focus:border-accent">
+                <div class="flex gap-2">
+                    <button id="profile-register" type="button" class="flex-1 rounded-xl border border-accent bg-accent-soft px-3 py-2 text-xs font-semibold text-accent hover:brightness-125">Create profile</button>
+                    <button id="profile-login" type="button" class="flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200 hover:border-accent">Sign in</button>
+                </div>
+                <p class="mt-3 text-[10px] leading-relaxed text-slate-500">Accounts are unique on this Nexus server. Use a password you do not use elsewhere.</p>
+            </div>
+            <div id="profile-account" class="hidden">
+                <p id="profile-display-name" class="mb-3 text-sm font-semibold text-accent"></p>
+                <div class="mb-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                    <h3 class="mb-2 text-xs font-semibold text-slate-200">Recent activity</h3>
+                    <div id="profile-activity" class="space-y-1 text-[11px] text-slate-400"></div>
+                </div>
+                <details class="mb-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                    <summary class="cursor-pointer text-xs font-semibold text-slate-300">Change username or password</summary>
+                    <label class="mb-1 mt-3 block text-xs text-slate-300" for="profile-new-username">New username (optional)</label>
+                    <input id="profile-new-username" type="text" minlength="3" maxlength="24" autocomplete="username"
+                           class="mb-2 w-full rounded-lg border border-white/10 bg-black/35 px-3 py-2 text-xs text-white outline-none focus:border-accent">
+                    <label class="mb-1 block text-xs text-slate-300" for="profile-new-password">New password (optional)</label>
+                    <input id="profile-new-password" type="password" minlength="8" maxlength="256" autocomplete="new-password"
+                           class="mb-2 w-full rounded-lg border border-white/10 bg-black/35 px-3 py-2 text-xs text-white outline-none focus:border-accent">
+                    <button id="profile-update" type="button" class="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200 hover:border-accent">Save profile changes</button>
+                </details>
+                <button id="profile-logout" type="button" class="w-full rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-200 hover:bg-rose-500/20">Sign out</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- =====================================================================
+         JAVASCRIPT ENGINE: DOCK MAGNIFICATION, WINDOWS, GAMES, SYNTH & BROWSER
+    ====================================================================== -->
+    <script>
+        /* -------------------------------------------------------------------
+           1. FULL-WIDTH BOTTOM TASKBAR AUTO-HIDE & MOUSE PROXIMITY MAGNIFICATION
+        ------------------------------------------------------------------- */
+        const taskbarWrapper = document.getElementById('taskbar-wrapper');
+        const taskbar = document.getElementById('windows-taskbar');
+        const dockItems = Array.from(taskbar.querySelectorAll('.dock-item'));
+        let taskbarAutoHide = true;
+        let isHoveringTaskbar = false;
+        let hideTaskbarTimeout = null;
+
+        function showBottomTaskbar() {
+            clearTimeout(hideTaskbarTimeout);
+            taskbarWrapper.classList.remove('taskbar-hidden');
+        }
+
+        function scheduleHideBottomTaskbar(delay = 650) {
+            if (!taskbarAutoHide) return;
+            const launcherOpen = document.getElementById('launcher-overlay').classList.contains('open');
+            if (isHoveringTaskbar || launcherOpen) return;
+            clearTimeout(hideTaskbarTimeout);
+            hideTaskbarTimeout = setTimeout(() => {
+                if (taskbarAutoHide && !isHoveringTaskbar && !document.getElementById('launcher-overlay').classList.contains('open')) {
+                    taskbarWrapper.classList.add('taskbar-hidden');
+                }
+            }, delay);
+        }
+
+        function toggleTaskbarAutoHide() {
+            taskbarAutoHide = !taskbarAutoHide;
+            const btn = document.getElementById('autohide-toggle-btn');
+            const trayLabel = document.getElementById('tray-pin-label');
+            if (btn) btn.textContent = `Bottom Bar Auto-Hide: ${taskbarAutoHide ? 'ON' : 'LOCKED'}`;
+            if (trayLabel) trayLabel.textContent = taskbarAutoHide ? 'Auto-Hide' : 'Pinned';
+
+            if (!taskbarAutoHide) {
+                showBottomTaskbar();
+                showToast('Bottom Taskbar Pinned Visible');
+            } else {
+                scheduleHideBottomTaskbar(900);
+                showToast('Bottom Taskbar Auto-Hide Enabled');
+            }
+        }
+
+        // Reveal when mouse approaches bottom edge of viewport; hide when interacting away
+        document.addEventListener('mousemove', (e) => {
+            if (!taskbarAutoHide) return;
+            const distFromBottom = window.innerHeight - e.clientY;
+            if (distFromBottom <= 68 || isHoveringTaskbar) {
+                showBottomTaskbar();
+            } else {
+                scheduleHideBottomTaskbar(450);
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if (!taskbarWrapper.contains(e.target) && taskbarAutoHide) {
+                scheduleHideBottomTaskbar(220);
+            }
+        });
+
+        taskbarWrapper.addEventListener('mouseenter', () => {
+            isHoveringTaskbar = true;
+            showBottomTaskbar();
+        });
+
+        taskbarWrapper.addEventListener('mouseleave', () => {
+            isHoveringTaskbar = false;
+            scheduleHideBottomTaskbar(500);
+        });
+
+        // Initial gentle auto-hide after startup
+        scheduleHideBottomTaskbar(2400);
+
+        // Proximity Magnification across Center Dock Row
+        taskbar.addEventListener('mousemove', (e) => {
+            const mouseX = e.clientX;
+            dockItems.forEach((item) => {
+                const rect = item.getBoundingClientRect();
+                const itemCenterX = rect.left + rect.width / 2;
+                const distance = Math.abs(mouseX - itemCenterX);
+                const maxDistance = 140;
+
+                if (distance < maxDistance) {
+                    const ratio = 1 - distance / maxDistance;
+                    const scale = 1 + 0.4 * Math.pow(ratio, 1.6);
+                    const lift = -9 * Math.pow(ratio, 1.5);
+                    const margin = 6 * Math.pow(ratio, 1.5);
+                    item.style.transform = `translateY(${lift}px) scale(${scale})`;
+                    item.style.marginLeft = `${margin}px`;
+                    item.style.marginRight = `${margin}px`;
+                } else {
+                    item.style.transform = 'translateY(0px) scale(1)';
+                    item.style.marginLeft = '0px';
+                    item.style.marginRight = '0px';
+                }
+            });
+        });
+
+        taskbar.addEventListener('mouseleave', () => {
+            dockItems.forEach((item) => {
+                item.style.transform = 'translateY(0px) scale(1)';
+                item.style.marginLeft = '0px';
+                item.style.marginRight = '0px';
+            });
+        });
+
+        /* -------------------------------------------------------------------
+           2. SMOOTH SLIDE-UP LAUNCHER DRAWER
+        ------------------------------------------------------------------- */
+        function toggleLauncher() {
+            const overlay = document.getElementById('launcher-overlay');
+            const isOpen = overlay.classList.contains('open');
+            if (isOpen) {
+                closeLauncher();
+            } else {
+                showBottomTaskbar();
+                overlay.classList.add('open');
+                const input = document.getElementById('launcher-search');
+                input.value = '';
+                filterLauncherApps('');
+                setTimeout(() => input.focus(), 140);
+            }
+        }
+
+        function closeLauncher() {
+            document.getElementById('launcher-overlay').classList.remove('open');
+            scheduleHideBottomTaskbar(600);
+        }
+
+        function launchFromDrawer(appId) {
+            closeLauncher();
+            openApp(appId);
+        }
+
+        function filterLauncherApps(query) {
+            const q = query.toLowerCase().trim();
+            document.querySelectorAll('.launcher-card').forEach((card) => {
+                const keywords = card.getAttribute('data-search') || '';
+                const text = card.innerText.toLowerCase();
+                card.style.display = (keywords.includes(q) || text.includes(q)) ? 'flex' : 'none';
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                toggleLauncher();
+            } else if (e.key === 'Escape') {
+                closeLauncher();
+                closeProfilePanel();
+            }
+        });
+
+        /* -------------------------------------------------------------------
+           3. WINDOW MANAGEMENT (Open, Focus, Minimize, Maximize, Close, Drag)
+        ------------------------------------------------------------------- */
+        let topZIndex = 100;
+        const maximizedStates = {};
+
+        function updateMaximizedLayout() {
+            const sidebar = document.getElementById('os-sidebar');
+            if (!sidebar) return;
+            const hasVisibleMaximizedWindow = Object.entries(maximizedStates).some(([appId, state]) => (
+                state?.active
+                && !document.getElementById(`win-${appId}`)?.classList.contains('hidden')
+            ));
+            sidebar.style.display = hasVisibleMaximizedWindow ? 'none' : '';
+        }
+
+        function restoreMaximizedWindow(appId, win) {
+            const previous = maximizedStates[appId];
+            if (!previous) return;
+            win.style.position = previous.position || '';
+            win.style.top = previous.top || '';
+            win.style.left = previous.left || '';
+            win.style.right = previous.right || '';
+            win.style.bottom = previous.bottom || '';
+            win.style.width = previous.width || '';
+            win.style.height = previous.height || '';
+            win.style.maxHeight = previous.maxHeight || '';
+            win.style.borderRadius = previous.borderRadius || '';
+            maximizedStates[appId] = null;
+        }
+
+        function focusWindow(appId) {
+            const win = document.getElementById(`win-${appId}`);
+            if (!win) return;
+            topZIndex++;
+            win.style.zIndex = topZIndex;
+            document.querySelectorAll('.app-window').forEach(w => w.classList.remove('focused-window'));
+            win.classList.add('focused-window');
+        }
+
+        function minimizeApp(appId) {
+            const win = document.getElementById(`win-${appId}`);
+            if (win) {
+                win.classList.add('hidden');
+                updateMaximizedLayout();
+                showToast(`Minimized ${appId}`);
+            }
+        }
+
+        function closeApp(appId) {
+            if (appId.startsWith('browser-')) {
+                closeBrowserInstance(appId);
+                return;
+            }
+            const win = document.getElementById(`win-${appId}`);
+            if (win) {
+                restoreMaximizedWindow(appId, win);
+                win.classList.add('hidden');
+                const dot = document.getElementById(`dot-${appId}`);
+                if (dot) dot.classList.add('hidden');
+                updateMaximizedLayout();
+            }
+        }
+
+        function maximizeApp(appId) {
+            const win = document.getElementById(`win-${appId}`);
+            if (!win) return;
+
+            if (!maximizedStates[appId]) {
+                maximizedStates[appId] = {
+                    position: win.style.position,
+                    top: win.style.top,
+                    left: win.style.left,
+                    right: win.style.right,
+                    bottom: win.style.bottom,
+                    width: win.style.width,
+                    height: win.style.height,
+                    maxHeight: win.style.maxHeight,
+                    borderRadius: win.style.borderRadius
+                };
+                win.style.position = 'fixed';
+                win.style.top = '0';
+                win.style.right = '0';
+                win.style.bottom = '0';
+                win.style.left = '0';
+                win.style.width = '100vw';
+                win.style.height = '100vh';
+                win.style.maxHeight = 'none';
+                win.style.borderRadius = '0';
+                win.style.zIndex = ++topZIndex;
+                maximizedStates[appId].active = true;
+            } else {
+                restoreMaximizedWindow(appId, win);
+            }
+            updateMaximizedLayout();
+            focusWindow(appId);
+        }
+
+        function minimizeAllWindows() {
+            document.querySelectorAll('.app-window').forEach(win => {
+                win.classList.add('hidden');
+            });
+            updateMaximizedLayout();
+            showToast('Minimized all windows');
+        }
+
+        function openApp(appId) {
+            const win = document.getElementById(`win-${appId}`);
+            if (!win) return;
+            win.classList.remove('hidden');
+            updateMaximizedLayout();
+            focusWindow(appId);
+
+            // Show glowing active dot under dock icon
+            const dot = document.getElementById(`dot-${appId}`);
+            if (dot) dot.classList.remove('hidden');
+
+            if (appId === 'games') {
+                loadGameCatalog();
+            }
+            if (appId === 'ai') {
+                refreshAiUsage();
+                setTimeout(() => document.getElementById('ai-prompt-input')?.focus(), 120);
+            }
+        }
+
+        function openNexusMovies() {
+            showToast('Opening Tubi inside the Nexus browser');
+            spawnBrowserWindow('https://tubitv.com/');
+        }
+
+        // Enable Smooth Mouse Dragging on Window Headers (Supports static & dynamic windows!)
+        function attachWindowDrag(header) {
+            if (header.dataset.dragBound) return;
+            header.dataset.dragBound = 'true';
+            header.addEventListener('pointerdown', (e) => {
+                if (e.button !== 0 || e.target.closest('button, select, input')) return;
+                const win = header.closest('.app-window');
+                const appId = win.id.replace('win-', '');
+                if (maximizedStates[appId]?.active) restoreMaximizedWindow(appId, win);
+                focusWindow(win.id.replace('win-', ''));
+                const bounds = win.offsetParent?.getBoundingClientRect() || { left: 0, top: 0 };
+                const rect = win.getBoundingClientRect();
+                const grabX = e.clientX - rect.left;
+                const grabY = e.clientY - rect.top;
+
+                function onPointerMove(ev) {
+                    win.style.left = `${Math.max(0, ev.clientX - bounds.left - grabX)}px`;
+                    win.style.top = `${Math.max(0, ev.clientY - bounds.top - grabY)}px`;
+                    win.style.right = 'auto';
+                }
+                function stopDragging() {
+                    document.removeEventListener('pointermove', onPointerMove);
+                    document.removeEventListener('pointerup', stopDragging);
+                    document.removeEventListener('pointercancel', stopDragging);
+                }
+                document.addEventListener('pointermove', onPointerMove);
+                document.addEventListener('pointerup', stopDragging);
+                document.addEventListener('pointercancel', stopDragging);
+            });
+        }
+        document.querySelectorAll('.window-header').forEach(attachWindowDrag);
+
+        /* -------------------------------------------------------------------
+           4. MULTI-INSTANCE WEB BROWSER ENGINE (Spawn Unlimited Windows!)
+        ------------------------------------------------------------------- */
+        let browserInstanceCounter = 0;
+        let activeBrowserInstanceId;
+        const scramjetFrames = new Map();
+        const electronBrowser = Boolean(window.browser?.resolveAddress);
+        const nexusBasePath = document.querySelector('meta[name="nexus-base-path"]')?.content || '/';
+        let scramjetControllerPromise;
+        let scramjetAdblockerPromise;
+        function nexusPath(path) {
+            const base = nexusBasePath.endsWith('/') ? nexusBasePath : `${nexusBasePath}/`;
+            return `${base}${path.replace(/^\/+/, '')}`;
+        }
+
+        async function requestProfile(route, method = 'GET', body) {
+            if (electronBrowser) {
+                if (route === '/register') {
+                    return { profile: await window.browser.registerProfile(body.username, body.password) };
+                }
+                if (route === '/login') {
+                    return { profile: await window.browser.loginProfile(body.username, body.password) };
+                }
+                if (route === '/me') {
+                    return { profile: await window.browser.getProfile() };
+                }
+                if (route === '/data') {
+                    return { profile: await window.browser.saveProfileData(body.data) };
+                }
+                if (route === '/account') {
+                    return { profile: await window.browser.updateProfile(body) };
+                }
+                if (route === '/logout') {
+                    await window.browser.logoutProfile();
+                    return { ok: true };
+                }
+                throw new Error('Unsupported profile action.');
+            }
+
+            const response = await fetch(nexusPath(`api/profile${route}`), {
+                method,
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                ...(body ? { body: JSON.stringify(body) } : {}),
+            });
+            let result;
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error('The profile service returned an invalid response.', { cause: error });
+            }
+            if (!response.ok) {
+                throw new Error(result.error || `Profile request failed (${response.status}).`);
+            }
+            return result;
+        }
+
+        async function requestMusicSearch(query) {
+            if (electronBrowser) return window.browser.searchMusic(query);
+            const response = await fetch(`${nexusPath('api/music/search')}?q=${encodeURIComponent(query)}`);
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || `Music search failed (${response.status}).`);
+            return result.tracks;
+        }
+
+        const searchEngines = {
+            duckduckgo: { name: 'DuckDuckGo', home: 'https://duckduckgo.com/' },
+            bing: { name: 'Bing', home: 'https://www.bing.com/' }
+        };
+        let preferredSearchEngine = localStorage.getItem('nexus-search-engine') === 'bing'
+            ? 'bing'
+            : 'duckduckgo';
+
+        const browserPages = {
+            github: 'https://github.com/explore',
+            classroom: 'https://classroom.google.com/',
+            wiki: 'https://www.wikipedia.org/'
+        };
+
+        function getScramjetController() {
+            if (!scramjetControllerPromise) {
+                scramjetControllerPromise = new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = nexusPath('bootstrap-init.js');
+                    script.onload = () => {
+                        if (typeof window.initBootstrap !== 'function') {
+                            reject(new Error('Scramjet bootstrap did not initialize.'));
+                            return;
+                        }
+                        Promise.resolve()
+                            .then(() => window.initBootstrap())
+                            .then(resolve, reject);
+                    };
+                    script.onerror = () => reject(new Error(
+                        'Scramjet could not start. Run the app with npm run preview.',
+                    ));
+                    document.head.appendChild(script);
+                });
+            }
+            return scramjetControllerPromise;
+        }
+
+        function loadAdblockerBundle() {
+            if (window.NexusAdblocker) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = nexusPath('adblocker.js');
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('Could not load the ad-blocking engine.'));
+                document.head.appendChild(script);
+            });
+        }
+
+        async function createScramjetAdblockerPlugin(controller) {
+            if (!scramjetAdblockerPromise) {
+                scramjetAdblockerPromise = (async () => {
+                    await loadAdblockerBundle();
+                    const engine = await window.NexusAdblocker.createFilterEngine();
+                    const ManagedPlugin = window.$scramjetController?.ManagedPlugin;
+                    const ScramjetHeaders = window.$scramjet?.ScramjetHeaders;
+                    if (!ManagedPlugin || !ScramjetHeaders || !controller?.createFrame) {
+                        throw new Error('Scramjet ad-blocking hooks are unavailable.');
+                    }
+
+                    return class NexusAdblockerPlugin extends ManagedPlugin {
+                        constructor() {
+                            super('nexus-adblocker', []);
+                        }
+
+                        install(frame) {
+                            this.tap(frame.hooks.fetch.intercept, (context, props) => {
+                                const { parsed } = context;
+                                if (parsed.destination === 'document') return;
+                                const sourceUrl = parsed.referrerSourceUrl?.href
+                                    || parsed.clientUrl?.href
+                                    || '';
+                                if (!window.NexusAdblocker.isRequestBlocked(engine, {
+                                    url: parsed.url.href,
+                                    destination: parsed.destination,
+                                    sourceUrl,
+                                })) return;
+
+                                const contentType = parsed.destination === 'script'
+                                    ? 'application/javascript'
+                                    : parsed.destination === 'style'
+                                        ? 'text/css'
+                                        : 'text/plain';
+                                props.response = {
+                                    body: '',
+                                    headers: ScramjetHeaders.fromRawHeaders([
+                                        ['content-type', contentType],
+                                    ]),
+                                    status: 200,
+                                    statusText: 'OK',
+                                };
+                            });
+                        }
+                    };
+                })().catch(error => {
+                    scramjetAdblockerPromise = undefined;
+                    throw error;
+                });
+            }
+
+            const AdblockerPlugin = await scramjetAdblockerPromise;
+            return new AdblockerPlugin();
+        }
+
+        function searchEngineFor(id) {
+            return document.getElementById(`search-engine-${id}`)?.value || preferredSearchEngine;
+        }
+
+        function setSearchEngine(engine) {
+            if (!Object.hasOwn(searchEngines, engine)) return;
+            preferredSearchEngine = engine;
+            localStorage.setItem('nexus-search-engine', engine);
+            document.querySelectorAll('.search-engine-select').forEach(select => {
+                select.value = engine;
+            });
+            showToast(`${searchEngines[engine].name} selected`);
+        }
+
+        function updateBrowserCounters() {
+            const count = document.querySelectorAll('[data-browser-window="true"]').length;
+            const badge = document.getElementById('browser-badge');
+            const dot = document.getElementById('dot-browser');
+            const countLabel = document.getElementById('taskbar-browser-count');
+
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+                dot.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+                dot.classList.add('hidden');
+            }
+            if (countLabel) {
+                countLabel.textContent = `${count} Browser${count === 1 ? '' : 's'}`;
+            }
+        }
+
+        async function spawnBrowserWindow(initialPage = 'home') {
+            if (electronBrowser) {
+                const address = initialPage === 'home'
+                    ? searchEngines[preferredSearchEngine].home
+                    : browserPages[initialPage] || initialPage;
+                window.browser.openBrowserWindow(address).catch(error => showToast(error.message));
+                return;
+            }
+
+            let controller;
+            let adblockerPlugin;
+            try {
+                controller = await getScramjetController();
+                adblockerPlugin = await createScramjetAdblockerPlugin(controller);
+            } catch (error) {
+                showToast(`Ad blocker could not start: ${error.message}`);
+                return;
+            }
+
+            browserInstanceCounter++;
+            const id = `browser-${browserInstanceCounter}`;
+            const offset = ((browserInstanceCounter - 1) % 6) * 28;
+            const topPx = 18 + offset;
+            const leftPx = 28 + offset;
+
+            const win = document.createElement('div');
+            win.id = `win-${id}`;
+            win.dataset.browserWindow = 'true';
+            win.onmousedown = () => {
+                activeBrowserInstanceId = id;
+                focusWindow(id);
+            };
+            win.className = 'app-window glass-window pointer-events-auto absolute right-4 sm:right-auto sm:w-[740px] h-[72%] max-h-[550px] rounded-[28px] flex flex-col overflow-hidden';
+            win.style.top = `${topPx}px`;
+            win.style.left = `${leftPx}px`;
+
+            win.innerHTML = `
+                <div class="window-header cursor-move px-4 py-3 bg-white/[0.03] border-b border-white/10 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <button onclick="closeBrowserInstance('${id}')" class="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:bg-rose-400 transition-colors" title="Close Window"></button>
+                        <button onclick="minimizeApp('${id}')" class="w-3.5 h-3.5 rounded-full bg-amber-400/80 hover:bg-amber-300 transition-colors" title="Minimize"></button>
+                        <button onclick="maximizeApp('${id}')" class="w-3.5 h-3.5 rounded-full bg-emerald-400/80 hover:bg-emerald-300 transition-colors" title="Expand"></button>
+                        <span id="title-${id}" class="ml-2 text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-accent"></span> AetherWeb #${browserInstanceCounter}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="spawnBrowserWindow('home')" class="px-2.5 py-1 rounded-full bg-accent-soft border border-accent text-accent text-[11px] font-semibold hover:brightness-125" title="Open Another Browser Window">+ New Window</button>
+                    </div>
+                </div>
+
+                <div class="px-4 py-2.5 bg-black/25 border-b border-white/[0.07] space-y-2">
+                    <form onsubmit="navigateBrowserInstance(event, '${id}')" class="flex items-center gap-2">
+                        <button type="button" onclick="loadBrowserInstancePage('${id}', 'home')" class="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300" title="Home">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                        </button>
+                        <button type="button" onclick="goBrowserBack('${id}')" class="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300" title="Back">←</button>
+                        <button type="button" onclick="goBrowserForward('${id}')" class="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300" title="Forward">→</button>
+                        <button type="button" onclick="reloadBrowser('${id}')" class="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300" title="Reload">↻</button>
+                        <div class="flex-1 flex items-center gap-2 bg-black/40 border border-white/10 focus-within:border-accent rounded-full px-3.5 py-1.5">
+                            <svg class="w-3.5 h-3.5 text-accent shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input id="url-${id}" type="text" value="${searchEngines[preferredSearchEngine].home}"
+                                   class="w-full select-text bg-transparent text-xs font-mono text-slate-200 outline-none" />
+                        </div>
+                        <select id="search-engine-${id}" class="search-engine-select rounded-full border border-white/10 bg-slate-900 px-2.5 py-2 text-xs text-slate-200 outline-none focus:border-accent" aria-label="Search engine" onchange="setSearchEngine(this.value)">
+                            <option value="duckduckgo" ${preferredSearchEngine === 'duckduckgo' ? 'selected' : ''}>DuckDuckGo</option>
+                            <option value="bing" ${preferredSearchEngine === 'bing' ? 'selected' : ''}>Bing</option>
+                        </select>
+                        <button type="submit" class="px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent text-accent text-xs font-semibold hover:brightness-125">Go</button>
+                    </form>
+
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                        <button onclick="loadBrowserInstancePage('${id}', 'home')" class="px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-accent-soft hover:text-accent border border-white/10 whitespace-nowrap transition-all">🦆 DuckDuckGo</button>
+                        <button onclick="loadBrowserInstancePage('${id}', 'github')" class="px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-accent-soft hover:text-accent border border-white/10 whitespace-nowrap transition-all">🐙 GitHub Repos</button>
+                        <button onclick="loadBrowserInstancePage('${id}', 'classroom')" class="px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-accent-soft hover:text-accent border border-white/10 whitespace-nowrap transition-all">📚 Classroom</button>
+                        <button onclick="loadBrowserInstancePage('${id}', 'wiki')" class="px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-accent-soft hover:text-accent border border-white/10 whitespace-nowrap transition-all">🌌 Cosmic Wiki</button>
+                    </div>
+                </div>
+
+                <div id="content-${id}" class="relative flex-1 min-h-0 overflow-hidden bg-[#090d14]">
+                    <div class="h-full flex items-center justify-center text-xs text-slate-400">Loading page…</div>
+                </div>
+            `;
+
+            document.getElementById('browser-windows-mount').appendChild(win);
+            attachWindowDrag(win.querySelector('.window-header'));
+            const webview = document.createElement(electronBrowser ? 'webview' : 'iframe');
+            webview.id = `webview-${id}`;
+            webview.className = 'browser-guest';
+            webview.title = `Browser window ${browserInstanceCounter}`;
+            if (electronBrowser) {
+                webview.setAttribute('partition', 'persist:nexus-browser');
+                webview.setAttribute('allowpopups', '');
+                webview.setAttribute('webpreferences', 'contextIsolation=yes,nodeIntegration=no,sandbox=yes');
+                webview.addEventListener('focus', () => {
+                    activeBrowserInstanceId = id;
+                });
+                webview.addEventListener('did-navigate', event => {
+                    const urlInput = document.getElementById(`url-${id}`);
+                    if (urlInput) urlInput.value = event.url;
+                });
+                webview.addEventListener('did-navigate-in-page', event => {
+                    const urlInput = document.getElementById(`url-${id}`);
+                    if (urlInput) urlInput.value = event.url;
+                });
+                webview.addEventListener('page-title-updated', event => {
+                    const title = document.getElementById(`title-${id}`);
+                    if (title) title.textContent = event.title || `AetherWeb #${id.split('-')[1]}`;
+                });
+                webview.addEventListener('did-fail-load', event => {
+                    if (event.isMainFrame && event.errorCode !== -3) {
+                        showBrowserLoadError(id, event.errorDescription, document.getElementById(`url-${id}`)?.value);
+                        showToast(`Could not load page: ${event.errorDescription}`);
+                    }
+                });
+            }
+            const content = document.getElementById(`content-${id}`);
+            content.replaceChildren(webview);
+            if (!electronBrowser) {
+                try {
+                    const frame = controller.createFrame(webview, {
+                        plugins: [
+                            adblockerPlugin,
+                            new $scramjetUtils.UrlWatcherPlugin(url => {
+                                const input = document.getElementById(`url-${id}`);
+                                if (input) input.value = url;
+                            }),
+                            new $scramjetUtils.CatchEscapedLinksPlugin(url => (
+                                new URL(`${nexusBasePath}?goto=${encodeURIComponent(url.href)}`, location.origin)
+                            )),
+                        ],
+                    });
+                    scramjetFrames.set(id, frame);
+                } catch (error) {
+                    showToast(`Could not create browser view: ${error.message}`);
+                    return;
+                }
+            }
+            loadBrowserInstancePage(id, initialPage);
+            focusWindow(id);
+            updateBrowserCounters();
+            showToast(`Opened Browser Window #${browserInstanceCounter}`);
+        }
+
+        function closeBrowserInstance(id) {
+            const win = document.getElementById(`win-${id}`);
+            if (win) win.remove();
+            maximizedStates[id] = null;
+            scramjetFrames.delete(id);
+            updateMaximizedLayout();
+            updateBrowserCounters();
+        }
+
+        async function loadBrowserInstancePage(id, destination) {
+            const address = destination === 'home'
+                ? searchEngines[searchEngineFor(id)].home
+                : browserPages[destination] || destination;
+            const urlInput = document.getElementById(`url-${id}`);
+            const webview = document.getElementById(`webview-${id}`);
+            if (!urlInput || !webview) return;
+            document.querySelector(`#content-${id} [data-browser-error]`)?.remove();
+            try {
+                if (
+                    destination !== 'home'
+                    && !Object.hasOwn(browserPages, destination)
+                    && isBrowserSearch(address)
+                ) {
+                    recordRecentSearch(address);
+                }
+                const engine = searchEngineFor(id);
+                const url = electronBrowser
+                    ? await window.browser.resolveAddress(address, engine)
+                    : resolveBrowserAddress(address, engine);
+                urlInput.value = url;
+                if (electronBrowser) {
+                    webview.src = url;
+                } else {
+                    const frame = scramjetFrames.get(id);
+                    if (!frame) throw new Error('Scramjet browser frame is not ready.');
+                    await frame.go(url);
+                }
+            } catch (error) {
+                showBrowserLoadError(id, error.message, address);
+                showToast(error.message);
+            }
+        }
+
+        function showBrowserLoadError(id, message, retryAddress) {
+            const content = document.getElementById(`content-${id}`);
+            if (!content) return;
+            content.querySelector('[data-browser-error]')?.remove();
+            const panel = document.createElement('div');
+            panel.dataset.browserError = 'true';
+            panel.className = 'absolute inset-0 z-10 flex items-center justify-center bg-[#090d14] p-6 text-center';
+            const messageGroup = document.createElement('div');
+            messageGroup.className = 'max-w-sm space-y-3';
+            const title = document.createElement('h2');
+            title.className = 'text-sm font-semibold text-slate-100';
+            title.textContent = 'This page could not be opened';
+            const detail = document.createElement('p');
+            detail.className = 'break-words text-xs text-slate-400';
+            detail.textContent = message || 'The address could not be reached.';
+            const retry = document.createElement('button');
+            retry.type = 'button';
+            retry.className = 'rounded-full border border-accent bg-accent-soft px-4 py-2 text-xs font-semibold text-accent hover:brightness-125';
+            retry.textContent = 'Try again';
+            retry.addEventListener('click', () => loadBrowserInstancePage(id, retryAddress));
+            messageGroup.append(title, detail, retry);
+            panel.append(messageGroup);
+            content.append(panel);
+        }
+
+        function isBrowserSearch(value) {
+            const input = value.trim();
+            return Boolean(input)
+                && !/^https?:\/\//i.test(input)
+                && !/^[\w.-]+(?::\d+)?(?:[/?#].*)?$/.test(input);
+        }
+
+        function resolveBrowserAddress(value, engine = 'duckduckgo') {
+            const input = value.trim();
+            if (!input) throw new Error('Enter a search or web address.');
+
+            if (/^https?:\/\//i.test(input)) {
+                const url = new URL(input);
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                    throw new Error('Only http and https addresses are supported.');
+                }
+                return url.href;
+            }
+
+            if (!/\s/.test(input) && /^[\w.-]+(?::\d+)?(?:[/?#].*)?$/.test(input)
+                && (input.includes('.') || /^localhost(?::\d+)?/i.test(input))) {
+                return `https://${input}`;
+            }
+
+            const searchUrl = engine === 'bing'
+                ? 'https://www.bing.com/search?q='
+                : 'https://duckduckgo.com/?q=';
+            return `${searchUrl}${encodeURIComponent(input)}`;
+        }
+
+        async function navigateBrowserInstance(e, id) {
+            e.preventDefault();
+            const raw = document.getElementById(`url-${id}`).value.trim();
+            if (!raw) return;
+            await loadBrowserInstancePage(id, raw);
+        }
+
+        function goBrowserBack(id) {
+            const webview = document.getElementById(`webview-${id}`);
+            if (electronBrowser) {
+                if (webview?.canGoBack()) webview.goBack();
+            } else {
+                scramjetFrames.get(id)?.back();
+            }
+        }
+
+        function goBrowserForward(id) {
+            const webview = document.getElementById(`webview-${id}`);
+            if (electronBrowser) {
+                if (webview?.canGoForward()) webview.goForward();
+            } else {
+                scramjetFrames.get(id)?.forward();
+            }
+        }
+
+        function reloadBrowser(id) {
+            const webview = document.getElementById(`webview-${id}`);
+            if (electronBrowser) {
+                webview?.reload();
+            } else {
+                scramjetFrames.get(id)?.reload();
+            }
+        }
+
+        window.browser?.onNewWindow(url => spawnBrowserWindow(url));
+        window.browser?.onCount(count => {
+            const badge = document.getElementById('browser-badge');
+            const dot = document.getElementById('dot-browser');
+            const countLabel = document.getElementById('taskbar-browser-count');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+                dot.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+                dot.classList.add('hidden');
+            }
+            if (countLabel) countLabel.textContent = `${count} Browser${count === 1 ? '' : 's'}`;
+        });
+        window.browser?.onFocusAddress(() => {
+            const input = document.getElementById(`url-${activeBrowserInstanceId}`);
+            input?.focus();
+            input?.select();
+        });
+
+        /* -------------------------------------------------------------------
+           4B. AETHER AI ASSISTANT ENGINE
+        ------------------------------------------------------------------- */
+        const aiConversation = [];
+        let aiRequestPending = false;
+        let aiUsage = null;
+        const aiModeDescriptions = {
+            creative: 'Practical code and design help, with focused solutions and useful tradeoffs.',
+            concise: 'Direct answers first, with only the key detail and caveats.',
+            ideas: 'Distinct, actionable options with brief tradeoffs and a recommendation.',
+            tutor: 'Clear step-by-step explanations that help you understand the reasoning.',
+        };
+        document.getElementById('ai-mode-select').addEventListener('change', (event) => {
+            document.getElementById('ai-mode-description').textContent =
+                aiModeDescriptions[event.target.value] || aiModeDescriptions.creative;
+        });
+
+        function sendAiPreset(text) {
+            const input = document.getElementById('ai-prompt-input');
+            input.value = text;
+            handleAiSubmit(new Event('submit'));
+        }
+
+        async function requestAiUsage() {
+            if (typeof window.browser?.getAiUsage === 'function') {
+                return window.browser.getAiUsage();
+            }
+            const response = await fetch(nexusPath('api/ai/usage'), {
+                credentials: 'same-origin',
+            });
+            let result;
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error('The AI token service returned an invalid response.', { cause: error });
+            }
+            if (!response.ok) {
+                throw new Error(result.error || `AI token request failed (${response.status}).`);
+            }
+            return result.usage;
+        }
+
+        function renderAiUsage(usage) {
+            if (!usage || !Number.isInteger(usage.remaining) || !Number.isInteger(usage.limit)) return;
+            aiUsage = usage;
+            const status = document.getElementById('ai-usage-status');
+            status.textContent = `AI tokens: ${usage.remaining} / ${usage.limit} questions left today`;
+            const submit = document.querySelector('#win-ai form button[type="submit"]');
+            if (submit) submit.disabled = aiRequestPending || usage.remaining === 0;
+        }
+
+        async function refreshAiUsage() {
+            try {
+                const usage = await requestAiUsage();
+                renderAiUsage(usage);
+                return usage;
+            } catch (error) {
+                const status = document.getElementById('ai-usage-status');
+                if (status) status.textContent = `Token balance unavailable: ${error.message}`;
+                return null;
+            }
+        }
+
+        function clearAiChat() {
+            if (aiRequestPending) {
+                showToast('Wait for the assistant to finish before clearing the conversation.');
+                return;
+            }
+            aiConversation.length = 0;
+            const feed = document.getElementById('ai-chat-feed');
+            feed.replaceChildren();
+            const notice = document.createElement('div');
+            notice.className = 'text-center text-[11px] text-slate-500 py-2';
+            notice.textContent = 'Conversation cleared. Ready for a new prompt.';
+            feed.append(notice);
+        }
+
+        function appendAiMessage(role, text, isError = false) {
+            const feed = document.getElementById('ai-chat-feed');
+            const row = document.createElement('div');
+            row.className = role === 'user' ? 'flex justify-end' : 'flex items-start gap-3';
+            const bubble = document.createElement('div');
+            bubble.className = role === 'user'
+                ? 'max-w-[82%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm border border-accent/50 bg-accent-soft p-3.5 text-white'
+                : `max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm border p-3.5 text-slate-200 ${isError ? 'border-rose-400/40 bg-rose-500/10' : 'border-white/10 bg-white/[0.05]'}`;
+            bubble.textContent = text;
+            row.append(bubble);
+            feed.append(row);
+            feed.scrollTop = feed.scrollHeight;
+            return bubble;
+        }
+
+        async function requestAiResponse(messages, mode) {
+            if (typeof window.browser?.sendAiPrompt === 'function') {
+                return window.browser.sendAiPrompt(messages, mode);
+            }
+            const response = await fetch(nexusPath('api/ai/chat'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages, mode }),
+            });
+            let result;
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error('The assistant service returned an invalid response.', { cause: error });
+            }
+            if (!response.ok) {
+                throw new Error(result.error || `Assistant request failed (${response.status}).`);
+            }
+            return result;
+        }
+
+        async function handleAiSubmit(e) {
+            e.preventDefault();
+            if (aiRequestPending) return;
+            const input = document.getElementById('ai-prompt-input');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+            input.value = '';
+
+            appendAiMessage('user', prompt);
+            aiConversation.push({ role: 'user', text: prompt });
+            const reply = appendAiMessage('model', 'Thinking with Nexus AI…');
+            const submit = document.querySelector('#win-ai form button[type="submit"]');
+            aiRequestPending = true;
+            input.disabled = true;
+            submit.disabled = true;
+            try {
+                const recentMessages = aiConversation.slice(-20);
+                if (recentMessages[0]?.role === 'model') recentMessages.shift();
+                const result = await requestAiResponse(recentMessages, document.getElementById('ai-mode-select').value);
+                aiConversation.push({ role: 'model', text: result.reply });
+                if (aiConversation.length > 20) {
+                    aiConversation.splice(0, aiConversation.length - 20);
+                }
+                reply.textContent = result.reply;
+                renderAiUsage(result.usage);
+            } catch (error) {
+                aiConversation.pop();
+                reply.textContent = error.message;
+                reply.classList.add('border-rose-400/40', 'bg-rose-500/10');
+            } finally {
+                aiRequestPending = false;
+                input.disabled = false;
+                submit.disabled = Boolean(aiUsage?.remaining === 0);
+                refreshAiUsage();
+                input.focus();
+            }
+        }
+
+        /* -------------------------------------------------------------------
+           5. GAME LIBRARY
+        ------------------------------------------------------------------- */
+        const gameRecentKey = 'nexus-game-recents';
+        const gameFavoritesKey = 'nexus-game-favorites';
+        const gamePageSize = 48;
+        let gameCatalog = [];
+        let gamesById = new Map();
+        let recentGameIds = loadGameIds(gameRecentKey);
+        let favoriteGameIds = new Set(loadGameIds(gameFavoritesKey, 500));
+        let gameLibraryView = 'all';
+        let gameCatalogLoaded = false;
+        let gameCatalogLoading = false;
+        let gameRenderLimit = gamePageSize;
+
+        function loadGameIds(key, limit = 100) {
+            try {
+                const value = JSON.parse(localStorage.getItem(key) || '[]');
+                return Array.isArray(value)
+                    ? [...new Set(value.filter(id => typeof id === 'string'))].slice(0, limit)
+                    : [];
+            } catch (error) {
+                console.warn(`Could not read saved game list "${key}".`, error);
+                return [];
+            }
+        }
+
+        function saveGameIds(key, ids) {
+            try {
+                localStorage.setItem(key, JSON.stringify(ids));
+            } catch (error) {
+                console.error(`Could not save game list "${key}".`, error);
+                showToast('Could not save your game list.');
+            }
+            if (typeof profileData !== 'undefined') {
+                if (key === gameRecentKey) profileData.recentGames = ids.slice(0, 100);
+                if (key === gameFavoritesKey) profileData.favoriteGames = ids.slice(0, 500);
+                persistProfileData();
+            }
+        }
+
+        async function loadGameCatalog(force = false) {
+            if (gameCatalogLoading) return;
+            if (gameCatalogLoaded && !force) {
+                renderGameLibrary();
+                return;
+            }
+
+            gameCatalogLoading = true;
+            document.getElementById('games-retry').classList.add('hidden');
+            document.getElementById('games-count').textContent = 'Loading games…';
+            document.getElementById('games-status').textContent = 'Loading the GameMonetize catalog…';
+            try {
+                let games;
+                if (typeof window.browser?.getGameCatalog === 'function') {
+                    games = await window.browser.getGameCatalog();
+                } else {
+                    const response = await fetch(nexusPath('api/games'));
+                    if (!response.ok) {
+                        const details = await response.json().catch(() => ({}));
+                        throw new Error(details.error || `Catalog request failed (${response.status}).`);
+                    }
+                    games = await response.json();
+                }
+
+                if (!Array.isArray(games) || games.length <= 2000) {
+                    throw new Error('The catalog did not return more than 2,000 games.');
+                }
+                gameCatalog = games;
+                gamesById = new Map(gameCatalog.map(game => [game.id, game]));
+                gameCatalogLoaded = true;
+                populateGameCategories();
+                renderGameLibrary();
+            } catch (error) {
+                console.error('Could not load the game catalog.', error);
+                document.getElementById('games-count').textContent = 'Catalog unavailable';
+                document.getElementById('games-status').textContent = error.message;
+                document.getElementById('games-grid').replaceChildren();
+                document.getElementById('games-retry').classList.remove('hidden');
+            } finally {
+                gameCatalogLoading = false;
+            }
+        }
+
+        function populateGameCategories() {
+            const select = document.getElementById('games-category');
+            const categories = [...new Set(gameCatalog.map(game => game.category))]
+                .filter(Boolean)
+                .sort((left, right) => left.localeCompare(right));
+            select.replaceChildren(new Option('All categories', 'all'));
+            for (const category of categories) {
+                select.add(new Option(category, category));
+            }
+        }
+
+        function setGameLibraryView(view) {
+            if (!['all', 'recent', 'favorites'].includes(view)) return;
+            gameLibraryView = view;
+            gameRenderLimit = gamePageSize;
+            for (const button of document.querySelectorAll('[data-game-view]')) {
+                const active = button.dataset.gameView === view;
+                button.setAttribute('aria-pressed', String(active));
+                button.className = active
+                    ? 'rounded-full border border-accent bg-accent-soft px-3 py-1.5 text-[11px] font-semibold text-accent'
+                    : 'rounded-full border border-transparent px-3 py-1.5 text-[11px] font-semibold text-slate-400 hover:text-white';
+            }
+            renderGameLibrary();
+        }
+
+        function visibleGames() {
+            let games = gameCatalog;
+            if (gameLibraryView === 'recent') {
+                games = recentGameIds.map(id => gamesById.get(id)).filter(Boolean);
+            } else if (gameLibraryView === 'favorites') {
+                games = gameCatalog.filter(game => favoriteGameIds.has(game.id));
+            }
+
+            const category = document.getElementById('games-category').value;
+            const query = document.getElementById('games-search').value.trim().toLowerCase();
+            return games.filter(game => {
+                const matchesCategory = category === 'all' || game.category === category;
+                const matchesQuery = !query
+                    || `${game.title} ${game.category} ${game.tags}`.toLowerCase().includes(query);
+                return matchesCategory && matchesQuery;
+            });
+        }
+
+        function createGameArtworkFallback(title) {
+            const fallback = document.createElement('span');
+            fallback.className = 'flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-sky-500/20 to-violet-500/20 text-center text-slate-300';
+            fallback.style.display = 'flex';
+            fallback.style.width = '100%';
+            fallback.style.height = '100%';
+            fallback.style.flexDirection = 'column';
+            fallback.style.alignItems = 'center';
+            fallback.style.justifyContent = 'center';
+            fallback.setAttribute('aria-hidden', 'true');
+            const icon = document.createElement('span');
+            icon.className = 'text-3xl';
+            icon.textContent = '▶';
+            const label = document.createElement('span');
+            label.className = 'max-w-[85%] truncate text-xs';
+            label.textContent = `${title} artwork unavailable`;
+            fallback.append(icon, label);
+            return fallback;
+        }
+
+        function renderGameLibrary() {
+            const grid = document.getElementById('games-grid');
+            const games = visibleGames();
+            const shownGames = games.slice(0, gameRenderLimit);
+            grid.replaceChildren();
+            document.getElementById('games-count').textContent
+                = `${gameCatalog.length.toLocaleString()} games`;
+            document.getElementById('games-status').textContent
+                = `${shownGames.length.toLocaleString()} of ${games.length.toLocaleString()} shown · GameMonetize · games open inside Nexus`;
+            document.getElementById('games-more').classList.toggle('hidden', shownGames.length >= games.length);
+
+            if (games.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'col-span-full flex min-h-40 items-center justify-center text-center text-xs text-slate-400';
+                empty.textContent = gameLibraryView === 'favorites'
+                    ? 'No favorites yet. Tap the star on a game to save it here.'
+                    : gameLibraryView === 'recent'
+                        ? 'Games you play will appear here.'
+                        : 'No games match this search.';
+                grid.append(empty);
+                return;
+            }
+
+            for (const [index, game] of shownGames.entries()) {
+                const card = document.createElement('article');
+                card.className = 'overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:border-accent/60 hover:bg-white/[0.07]';
+
+                const artwork = document.createElement('button');
+                artwork.type = 'button';
+                artwork.className = 'group block w-full overflow-hidden border-0 bg-black/30 p-0 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent';
+                artwork.style.display = 'block';
+                artwork.style.width = '100%';
+                artwork.style.aspectRatio = '4 / 3';
+                artwork.style.padding = '0';
+                artwork.style.border = '0';
+                artwork.style.appearance = 'none';
+                artwork.setAttribute('aria-label', `Play ${game.title} in Nexus`);
+                artwork.addEventListener('click', () => playArcadeGame(game.id));
+
+                if (game.thumbnail) {
+                    const image = document.createElement('img');
+                    image.className = 'block h-full w-full object-cover transition-transform duration-300 group-hover:scale-105';
+                    image.style.display = 'block';
+                    image.style.width = '100%';
+                    image.style.height = '100%';
+                    image.style.objectFit = 'cover';
+                    image.alt = '';
+                    image.decoding = 'async';
+                    image.loading = index < 8 ? 'eager' : 'lazy';
+                    image.fetchPriority = index < 8 ? 'high' : 'auto';
+                    image.addEventListener('error', () => {
+                        image.replaceWith(createGameArtworkFallback(game.title));
+                    }, { once: true });
+                    artwork.append(image);
+                    image.src = game.thumbnail;
+                } else {
+                    artwork.append(createGameArtworkFallback(game.title));
+                }
+                card.append(artwork);
+
+                const content = document.createElement('div');
+                content.className = 'space-y-2 p-2.5';
+                const title = document.createElement('h3');
+                title.className = 'truncate text-xs font-semibold text-slate-100';
+                title.textContent = game.title;
+                title.title = game.title;
+                const category = document.createElement('p');
+                category.className = 'truncate text-[10px] text-slate-400';
+                category.textContent = game.category;
+                const actions = document.createElement('div');
+                actions.className = 'flex items-center gap-2';
+
+                const play = document.createElement('button');
+                play.type = 'button';
+                play.className = 'flex-1 rounded-full border border-accent bg-accent-soft px-2 py-1.5 text-[11px] font-semibold text-accent hover:brightness-125';
+                play.textContent = 'Play in Nexus';
+                play.addEventListener('click', () => playArcadeGame(game.id));
+
+                const favorite = document.createElement('button');
+                favorite.type = 'button';
+                favorite.className = 'grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/20 text-base hover:border-accent';
+                favorite.setAttribute('aria-label', favoriteGameIds.has(game.id) ? 'Remove favorite' : 'Add favorite');
+                favorite.setAttribute('aria-pressed', String(favoriteGameIds.has(game.id)));
+                favorite.title = favoriteGameIds.has(game.id) ? 'Remove from favorites' : 'Add to favorites';
+                favorite.textContent = favoriteGameIds.has(game.id) ? '★' : '☆';
+                favorite.addEventListener('click', () => toggleGameFavorite(game.id));
+
+                actions.append(play, favorite);
+                content.append(title, category, actions);
+                card.append(content);
+                grid.append(card);
+            }
+        }
+
+        function playArcadeGame(id) {
+            const game = gamesById.get(id);
+            if (!game) return;
+            recentGameIds = [id, ...recentGameIds.filter(recentId => recentId !== id)].slice(0, 100);
+            saveGameIds(gameRecentKey, recentGameIds);
+            renderGameLibrary();
+            showToast(`Opening ${game.title} inside Nexus`);
+            spawnBrowserWindow(game.url);
+        }
+
+        function toggleGameFavorite(id) {
+            if (favoriteGameIds.has(id)) favoriteGameIds.delete(id);
+            else favoriteGameIds.add(id);
+            favoriteGameIds = new Set([...favoriteGameIds].slice(-500));
+            saveGameIds(gameFavoritesKey, [...favoriteGameIds]);
+            renderGameLibrary();
+        }
+
+        document.querySelectorAll('[data-game-view]').forEach(button => {
+            button.addEventListener('click', () => setGameLibraryView(button.dataset.gameView));
+        });
+        document.getElementById('games-search').addEventListener('input', () => {
+            gameRenderLimit = gamePageSize;
+            renderGameLibrary();
+        });
+        document.getElementById('games-category').addEventListener('change', () => {
+            gameRenderLimit = gamePageSize;
+            renderGameLibrary();
+        });
+        document.getElementById('games-more').addEventListener('click', () => {
+            gameRenderLimit += gamePageSize;
+            renderGameLibrary();
+        });
+        document.getElementById('games-retry').addEventListener('click', () => loadGameCatalog(true));
+
+        /* -------------------------------------------------------------------
+           6. WEB AUDIO SYNTHWAVE / LO-FI AMBIENT GENERATOR
+        ------------------------------------------------------------------- */
+        let audioCtx = null;
+        let isPlayingMusic = false;
+        let musicLoopTimer = null;
+        let masterGain = null;
+        let currentTrackIdx = 0;
+        let vizPhase = 0;
+
+        const tracks = [
+            { title: 'Midnight Fjord Drift', artist: 'AetherOS Generative Synth • 432Hz Chill', notes: [220, 261.63, 329.63, 392.00, 493.88] },
+            { title: 'Neon Rain Over Tokyo', artist: 'Cyberwave Arp • Lo-Fi Pulse', notes: [196.00, 246.94, 293.66, 369.99, 440.00] },
+            { title: 'Aurora Borealis Pulse', artist: 'Deep Space Pads • Ambient', notes: [174.61, 220.00, 261.63, 329.63, 392.00] }
+        ];
+
+        function selectTrack(idx) {
+            currentTrackIdx = idx;
+            document.getElementById('track-title').textContent = tracks[idx].title;
+            document.getElementById('track-artist').textContent = tracks[idx].artist;
+            document.querySelectorAll('.track-pill').forEach((pill, i) => {
+                pill.className = i === idx
+                    ? 'track-pill px-3 py-1 rounded-full text-xs bg-accent-soft border border-accent text-accent font-medium'
+                    : 'track-pill px-3 py-1 rounded-full text-xs bg-white/[0.05] border border-white/10 text-slate-300 hover:text-white';
+            });
+            if (isPlayingMusic) startSynthLoop();
+        }
+
+        function nextTrack() { selectTrack((currentTrackIdx + 1) % tracks.length); }
+        function prevTrack() { selectTrack((currentTrackIdx - 1 + tracks.length) % tracks.length); }
+
+        async function toggleMusicPlay() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) {
+                    showToast('This browser does not support audio playback.');
+                    return;
+                }
+                audioCtx = new AudioContext();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.26;
+                masterGain.connect(audioCtx.destination);
+            }
+            try {
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+            } catch (error) {
+                console.error('Could not resume the ambient music player.', error);
+                showToast('Could not start audio playback. Check your browser permissions.');
+                return;
+            }
+
+            isPlayingMusic = !isPlayingMusic;
+            const playButton = document.getElementById('music-play-btn');
+            const vinyl = document.getElementById('vinyl-core');
+
+            if (isPlayingMusic) {
+                playButton.textContent = 'Pause';
+                playButton.setAttribute('aria-pressed', 'true');
+                vinyl.classList.add('spin-slow');
+                startSynthLoop();
+            } else {
+                playButton.textContent = 'Play';
+                playButton.setAttribute('aria-pressed', 'false');
+                vinyl.classList.remove('spin-slow');
+                clearInterval(musicLoopTimer);
+            }
+        }
+
+        function startSynthLoop() {
+            if (musicLoopTimer) clearInterval(musicLoopTimer);
+            let step = 0;
+            const triggerNote = () => {
+                if (!isPlayingMusic || !audioCtx) return;
+                const scale = tracks[currentTrackIdx].notes;
+                const freq = scale[step % scale.length] * (step % 4 === 0 ? 0.5 : 1);
+                step++;
+
+                const osc = audioCtx.createOscillator();
+                const noteGain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                noteGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                noteGain.gain.exponentialRampToValueAtTime(0.28, audioCtx.currentTime + 0.15);
+                noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.4);
+
+                osc.connect(noteGain);
+                noteGain.connect(masterGain);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.45);
+            };
+            triggerNote();
+            musicLoopTimer = setInterval(triggerNote, 680);
+        }
+
+        function setMusicVolume(val) {
+            document.getElementById('vol-label').textContent = `${val}%`;
+            if (masterGain && audioCtx) {
+                masterGain.gain.setTargetAtTime((val / 100) * 0.4, audioCtx.currentTime, 0.05);
+            }
+        }
+
+        // Circular Audio Visualizer Loop
+        const vizCanvas = document.getElementById('audio-viz');
+        const vCtx = vizCanvas.getContext('2d');
+        function renderViz() {
+            vCtx.clearRect(0, 0, 116, 116);
+            const accent = getComputedStyle(document.body).getPropertyValue('--accent-primary').trim() || '#38bdf8';
+            const bars = 28;
+            vizPhase += isPlayingMusic ? 0.08 : 0.015;
+
+            for (let i = 0; i < bars; i++) {
+                const angle = (i / bars) * Math.PI * 2;
+                const amp = isPlayingMusic ? (10 + Math.sin(vizPhase + i * 0.6) * 8) : 3;
+                const r1 = 26;
+                const r2 = r1 + amp;
+                vCtx.strokeStyle = accent;
+                vCtx.lineWidth = 2.5;
+                vCtx.beginPath();
+                vCtx.moveTo(58 + Math.cos(angle) * r1, 58 + Math.sin(angle) * r1);
+                vCtx.lineTo(58 + Math.cos(angle) * r2, 58 + Math.sin(angle) * r2);
+                vCtx.stroke();
+            }
+            requestAnimationFrame(renderViz);
+        }
+        renderViz();
+
+        /* -------------------------------------------------------------------
+           7. SETTINGS, WALLPAPERS, CLOCK & AMBIENT PARTICLES
+        ------------------------------------------------------------------- */
+        const wallpaperList = [
+            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2400&q=85',
+            'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2400&q=85',
+            'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=2400&q=85',
+            'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=2400&q=85'
+        ];
+        let wpIndex = 0;
+
+        function setWallpaper(idx) {
+            wpIndex = idx;
+            document.getElementById('wallpaper-img').src = wallpaperList[idx];
+            showToast('Updated Scenic Wallpaper');
+        }
+
+        function nextWallpaper() {
+            setWallpaper((wpIndex + 1) % wallpaperList.length);
+        }
+
+        const themeOrder = ['cyan', 'crimson', 'emerald', 'violet'];
+        function setTheme(name) {
+            document.body.setAttribute('data-theme', name);
+            const styles = {
+                cyan: 'bg-sky-500/20 text-sky-300 border-sky-400/40',
+                crimson: 'bg-rose-500/20 text-rose-300 border-rose-400/40',
+                emerald: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
+                violet: 'bg-purple-500/20 text-purple-300 border-purple-400/40'
+            };
+            themeOrder.forEach(t => {
+                const el = document.getElementById(`theme-pill-${t}`);
+                if (el) {
+                    el.className = 'px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border ' +
+                        (t === name ? styles[t] : 'text-slate-400 hover:text-white border-transparent');
+                }
+            });
+        }
+
+        function cycleTheme() {
+            const cur = document.body.getAttribute('data-theme') || 'cyan';
+            const next = themeOrder[(themeOrder.indexOf(cur) + 1) % themeOrder.length];
+            setTheme(next);
+            showToast(`Glow Theme: ${next.toUpperCase()}`);
+        }
+
+        function updateCornerRadius(val) {
+            document.documentElement.style.setProperty('--screen-radius', `${val}px`);
+            document.getElementById('radius-val').textContent = `${val}px`;
+        }
+
+        function updateGlassBlur(val) {
+            document.documentElement.style.setProperty('--glass-blur', `${val}px`);
+            document.getElementById('blur-val').textContent = `${val}px`;
+        }
+
+        // Auto-save Notes
+        const notesArea = document.getElementById('notes-textarea');
+        notesArea.value = localStorage.getItem('aether_notes') || '• Welcome to AetherOS!\n• Try moving your mouse over the Windows-style bottom taskbar icons.\n• Press Ctrl + K or click the glowing circle to slide up the Launcher.';
+        function saveNotes(val) {
+            localStorage.setItem('aether_notes', val);
+            document.getElementById('note-status').textContent = 'Saved ✓';
+        }
+
+        // Live Clock
+        let use24Hour = false;
+        function updateAllClocks() {
+            const now = new Date();
+            let h = now.getHours();
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            if (!use24Hour) {
+                h = h % 12 || 12;
+            }
+            const hStr = String(h).padStart(2, '0');
+
+            document.getElementById('hero-hours').textContent = hStr;
+            document.getElementById('hero-minutes').textContent = m;
+            document.getElementById('hero-ampm').textContent = use24Hour ? '24H' : ampm;
+
+            const trayClock = document.getElementById('tray-clock');
+            if (trayClock) trayClock.textContent = `${hStr}:${m}`;
+
+            document.getElementById('rail-hour').textContent = hStr;
+            document.getElementById('rail-min').textContent = m;
+            document.getElementById('rail-ampm').textContent = use24Hour ? '24H' : ampm;
+
+            const months = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+            const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            document.getElementById('hero-month').textContent = months[now.getMonth()];
+            document.getElementById('hero-day').textContent = now.getDate();
+            document.getElementById('hero-weekday').textContent = days[now.getDay()];
+            const dashboardClock = document.getElementById('tray-clock-new');
+            if (dashboardClock) dashboardClock.textContent = `${hStr}:${m}`;
+        }
+        function toggleClockFormat() {
+            use24Hour = !use24Hour;
+            updateAllClocks();
+            showToast(use24Hour ? '24-Hour Clock Enabled' : '12-Hour Clock Enabled');
+        }
+        setInterval(updateAllClocks, 1000);
+        updateAllClocks();
+
+        // Ambient Floating Glow Particles
+        const pCanvas = document.getElementById('particle-canvas');
+        const pCtx = pCanvas.getContext('2d');
+        let particlesEnabled = true;
+        const particles = Array.from({ length: 28 }, () => ({
+            x: Math.random() * 1600,
+            y: Math.random() * 900,
+            r: Math.random() * 2.2 + 0.8,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: -Math.random() * 0.4 - 0.1
+        }));
+
+        function resizeParticleCanvas() {
+            pCanvas.width = pCanvas.parentElement.clientWidth;
+            pCanvas.height = pCanvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeParticleCanvas);
+        resizeParticleCanvas();
+
+        function animateParticles() {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            if (particlesEnabled) {
+                const accent = getComputedStyle(document.body).getPropertyValue('--accent-primary').trim() || '#38bdf8';
+                pCtx.fillStyle = accent;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.y < 0) p.y = pCanvas.height;
+                    if (p.x < 0) p.x = pCanvas.width;
+                    if (p.x > pCanvas.width) p.x = 0;
+
+                    pCtx.globalAlpha = 0.45;
+                    pCtx.beginPath();
+                    pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    pCtx.fill();
+                });
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        function toggleParticles() {
+            particlesEnabled = !particlesEnabled;
+            document.getElementById('particles-toggle-btn').textContent = `Ambient Glow Particles: ${particlesEnabled ? 'ON' : 'OFF'}`;
+        }
+
+        // Telemetry Pulse Wave
+        const telCanvas = document.getElementById('telemetry-canvas');
+        const tCtx = telCanvas.getContext('2d');
+        let telOffset = 0;
+        setInterval(() => {
+            if (document.getElementById('win-monitor').classList.contains('hidden')) return;
+            telOffset += 0.25;
+            const cpu = Math.floor(22 + Math.sin(telOffset) * 10 + Math.random() * 5);
+            document.getElementById('mon-cpu').textContent = `${cpu}%`;
+
+            tCtx.clearRect(0, 0, telCanvas.width, telCanvas.height);
+            const accent = getComputedStyle(document.body).getPropertyValue('--accent-primary').trim() || '#38bdf8';
+            tCtx.strokeStyle = accent;
+            tCtx.lineWidth = 2.5;
+            tCtx.beginPath();
+            for (let x = 0; x < telCanvas.width; x += 6) {
+                const y = 45 + Math.sin(x * 0.03 + telOffset) * 18 * Math.cos(x * 0.01);
+                if (x === 0) tCtx.moveTo(x, y); else tCtx.lineTo(x, y);
+            }
+            tCtx.stroke();
+        }, 120);
+
+        // Toast Helper
+        let toastTimer;
+        function showToast(msg) {
+            const el = document.getElementById('os-toast');
+            document.getElementById('os-toast-text').textContent = msg;
+            el.classList.remove('opacity-0', 'translate-y-2');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.add('opacity-0', 'translate-y-2'), 2300);
+        }
+
+        document.getElementById('os-viewport').append(
+            document.getElementById('windows-container'),
+        );
+        const escapedUrl = new URLSearchParams(location.search).get('goto');
+        if (escapedUrl) history.replaceState(null, '', location.pathname);
+        spawnBrowserWindow(escapedUrl || 'home');
+    </script>
+    <script src="music-profile.js"></script>
+</body>
+</html>

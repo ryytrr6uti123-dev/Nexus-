@@ -1,0 +1,47 @@
+services:
+  nexus:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    environment:
+      PORT: 4173
+      NEXUS_BASE_PATH: ${NEXUS_BASE_PATH:-/Nexus/IXLearning}
+      NEXUS_DATA_DIR: /data
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    volumes:
+      - nexus_data:/data
+    expose:
+      - "4173"
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - nexus
+    environment:
+      NEXUS_DOMAIN: ${NEXUS_DOMAIN:?Set NEXUS_DOMAIN in .env}
+      NEXUS_ACCESS_USER: ${NEXUS_ACCESS_USER:?Set NEXUS_ACCESS_USER in .env}
+      NEXUS_ACCESS_PASSWORD_HASH: ${NEXUS_ACCESS_PASSWORD_HASH:?Set NEXUS_ACCESS_PASSWORD_HASH in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+      - "8443:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  nexus_data:
+  ollama_data:
+  caddy_data:
+  caddy_config:
